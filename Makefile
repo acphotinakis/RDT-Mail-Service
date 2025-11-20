@@ -59,7 +59,6 @@ run:
 		echo "Error: venv missing. Run: make venv PYTHON=/path/to/python3.11"; \
 		exit 1; \
 	fi
-# 	$(VENV_PY) src/main.py
 	$(VENV_PY) -m src.main
 
 
@@ -111,6 +110,7 @@ sync_repo:
 	fi; \
 	git add .; \
 	git commit -m "$$msg"; \
+	make revisions
 	git pull --rebase; \
 	git push
 

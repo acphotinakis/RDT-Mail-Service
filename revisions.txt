@@ -1,0 +1,4 @@
+eee4122 updated requirements.txt
+6a6beaa added documentation and starter python code for main.py
+03fb63f updating with project docs/diagrams and a simple makefile
+0c7f466 Initial commit
