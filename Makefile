@@ -114,4 +114,10 @@ sync_repo:
 	git push;
 
 
-.PHONY: venv install freeze run sphinx_docs clean revisions check_python format coverage sync_repo
+setup:
+	chmod +x setup-project.sh
+	./setup-project.sh
+
+
+
+.PHONY: venv install freeze run sphinx_docs clean revisions check_python format coverage sync_repo setup
