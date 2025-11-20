@@ -73,7 +73,7 @@ sphinx_docs:
 
 # Generate revisions.txt (git log)
 revisions:
-	git log --oneline > revisions.txt
+	git log > revisions.txt
 	@echo "Revisions written to revisions.txt"
 
 # Clean build output and venv

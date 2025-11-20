@@ -1,6 +1,41 @@
-4804454 updating
-c06b4bc updating make file with sync_repo that updates revisions.txt when message is committed
-eee4122 updated requirements.txt
-6a6beaa added documentation and starter python code for main.py
-03fb63f updating with project docs/diagrams and a simple makefile
-0c7f466 Initial commit
+commit aca89a2b08e24c4646c2d0759951f4e5f281f4e4
+Author: Andrew Photinakis <andrewcphotinakis@gmail.com>
+Date:   Thu Nov 20 18:30:48 2025 -0500
+
+    updating makefile
+
+commit 4804454f704d0533bdf3c02eaa6f2658f612055b
+Author: Andrew Photinakis <andrewcphotinakis@gmail.com>
+Date:   Thu Nov 20 18:30:17 2025 -0500
+
+    updating
+
+commit c06b4bce3c17cb3bdd9decb8a76aeb88038a1990
+Author: Andrew Photinakis <andrewcphotinakis@gmail.com>
+Date:   Thu Nov 20 18:29:53 2025 -0500
+
+    updating make file with sync_repo that updates revisions.txt when message is committed
+
+commit eee4122f2934544698fb12f8ecc3d90c201b78b9
+Author: Andrew Photinakis <andrewcphotinakis@gmail.com>
+Date:   Thu Nov 20 18:28:26 2025 -0500
+
+    updated requirements.txt
+
+commit 6a6beaa5ccc7fa755ab8819fdac832dee7df6dc8
+Author: Andrew Photinakis <andrewcphotinakis@gmail.com>
+Date:   Thu Nov 20 18:27:31 2025 -0500
+
+    added documentation and starter python code for main.py
+
+commit 03fb63f3d1057480ecfe15ee4cc76ebc99082d54
+Author: Andrew Photinakis <andrewcphotinakis@gmail.com>
+Date:   Thu Nov 20 18:06:24 2025 -0500
+
+    updating with project docs/diagrams and a simple makefile
+
+commit 0c7f466df1d849a7b890c87dadace311b61a7557
+Author: Caleb Talbott <90918332+cjt7922@users.noreply.github.com>
+Date:   Wed Nov 19 21:25:45 2025 -0500
+
+    Initial commit
