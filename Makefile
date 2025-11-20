@@ -110,8 +110,7 @@ sync_repo:
 	fi; \
 	git add .; \
 	git commit -m "$$msg"; \
-	make revisions
-	git pull --rebase; \
+	make revisions \
 	git push
 
 

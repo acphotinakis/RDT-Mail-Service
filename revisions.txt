@@ -1,3 +1,4 @@
+c06b4bc updating make file with sync_repo that updates revisions.txt when message is committed
 eee4122 updated requirements.txt
 6a6beaa added documentation and starter python code for main.py
 03fb63f updating with project docs/diagrams and a simple makefile
