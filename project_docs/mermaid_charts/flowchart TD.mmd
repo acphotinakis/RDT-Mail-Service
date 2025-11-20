@@ -1,0 +1,26 @@
+sequenceDiagram
+    title SMTP Send Email via Custom RDT
+
+    participant UA_Client as "User Agent (Sender)"
+    participant MTA_Client as "MTA Client (SMTP + RDT)"
+    participant MTA_Server as "MTA Server (SMTP Listener)"
+    participant StorageMgr as "Mailbox Storage Manager"
+
+    UA_Client->>MTA_Client: Compose Email\npass message data
+    MTA_Client->>MTA_Server: RDT Handshake (SYN, SYN-ACK, ACK)
+    MTA_Client->>MTA_Server: SMTP HELO
+    MTA_Server-->>MTA_Client: 250 OK
+
+    MTA_Client->>MTA_Server: MAIL FROM:<sender>
+    MTA_Server-->>MTA_Client: 250 OK
+
+    MTA_Client->>MTA_Server: RCPT TO:<recipient>
+    MTA_Server-->>MTA_Client: 250 OK
+
+    MTA_Client->>MTA_Server: DATA\n<email body>
+    MTA_Server->>StorageMgr: Save email to mailbox
+    StorageMgr-->>MTA_Server: Write complete
+    MTA_Server-->>MTA_Client: 250 Message accepted
+
+    MTA_Client->>MTA_Server: QUIT
+    MTA_Server-->>MTA_Client: 221 Bye

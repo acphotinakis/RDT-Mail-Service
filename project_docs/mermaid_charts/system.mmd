@@ -1,0 +1,15 @@
+sequenceDiagram
+  participant User as User
+  participant Device as Device
+  participant Database as Database
+
+  User ->> Device: 1: Open Application
+  Device -->> Device: 2: Access Webcams
+  Device -->> Device: 3: Get photo
+  Device ->> User: 4: Detect Face
+  Device ->> Database: 5: Retrieve Mood
+  Database -->> Device: 6: Mood
+  Device ->> User: 7: Display Mood
+  Device ->> Database: 8: Retrieve Music
+  Database -->> Device: 9: Generated Playlist
+  Device ->> User: 10: Playlist
