@@ -110,8 +110,8 @@ sync_repo:
 	fi; \
 	git add .; \
 	git commit -m "$$msg"; \
-	make revisions \
-	git push
+	make revisions; \
+	git push;
 
 
 .PHONY: venv install freeze run sphinx_docs clean revisions check_python format coverage sync_repo
