@@ -1,3 +1,9 @@
+commit 8dc67ef6cfb3241d4c0c9369e56739f462fd46a9
+Author: Andrew Photinakis <andrewcphotinakis@gmail.com>
+Date:   Thu Nov 20 18:31:40 2025 -0500
+
+    updated rule for exporting revisions
+
 commit aca89a2b08e24c4646c2d0759951f4e5f281f4e4
 Author: Andrew Photinakis <andrewcphotinakis@gmail.com>
 Date:   Thu Nov 20 18:30:48 2025 -0500

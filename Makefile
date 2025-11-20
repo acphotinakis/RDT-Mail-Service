@@ -108,9 +108,9 @@ sync_repo:
 		echo "Aborting: commit message cannot be empty."; \
 		exit 1; \
 	fi; \
+	make revisions; \
 	git add .; \
 	git commit -m "$$msg"; \
-	make revisions; \
 	git push;
 
 
