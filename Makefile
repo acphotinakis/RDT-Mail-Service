@@ -81,7 +81,6 @@ clean:
 	rm -rf $(VENV_DIR)
 	rm -rf docs/_build
 	rm -f revisions.txt
-	rm -f $(PYTHON_FILE)
 	@echo "Cleaned."
 
 format:
@@ -118,6 +117,9 @@ setup:
 	chmod +x setup-project.sh
 	./setup-project.sh
 
+
+clean_setup:
+	rm -rf email-network-service
 
 
 .PHONY: venv install freeze run sphinx_docs clean revisions check_python format coverage sync_repo setup

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # Project root
-ROOT_DIR="."
+ROOT_DIR="email-network-service"
 
 # Helper function to create directories and files
 create_dir() {
