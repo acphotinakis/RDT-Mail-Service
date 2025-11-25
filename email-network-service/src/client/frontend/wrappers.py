@@ -24,11 +24,17 @@ def _parse_email_file(uid: str, content: str) -> Optional[EmailData]:
         for part in msg.walk():
             content_type = part.get_content_type()
             if "text/html" in content_type:
-                body_html = part.get_payload(decode=True).decode()
+                payload = part.get_payload(decode=True)
+                if isinstance(payload, bytes):
+                    body_html = payload.decode()
             elif "text/plain" in content_type:
-                body_text = part.get_payload(decode=True).decode()
+                payload = part.get_payload(decode=True)
+                if isinstance(payload, bytes):
+                    body_text = payload.decode()
     else:
-        body_text = msg.get_payload(decode=True).decode()
+        payload = msg.get_payload(decode=True)
+        if isinstance(payload, bytes):
+            body_text = payload.decode()
 
     return EmailData(
         uid=uid,

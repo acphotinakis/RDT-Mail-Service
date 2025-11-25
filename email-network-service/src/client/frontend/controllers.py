@@ -4,7 +4,7 @@ from PySide6.QtWidgets import QDialog
 from src.client.frontend.wrappers import StorageWrapper, SMTPWrapper, POP3Wrapper
 from src.client.frontend.models import EmailListModel, EmailData
 from src.client.frontend.views import ComposeWindow, SettingsDialog
-from typing import Optional
+from typing import Optional, cast
 
 
 class EmailFetcher(QThread):
@@ -57,7 +57,7 @@ class AppController(QObject):
         indexes = self.main_window.email_list_view.selectedIndexes()
         if not indexes:
             return None
-        return self.email_model.data(indexes[0], Qt.UserRole)
+        return cast(Optional[EmailData], self.email_model.data(indexes[0], Qt.ItemDataRole.UserRole))
 
     def load_user_emails(self, user: str):
         """Loads emails for a user and updates the model."""
@@ -73,7 +73,7 @@ class AppController(QObject):
         if not index.isValid():
             return
 
-        email_data = self.email_model.data(index, Qt.UserRole)
+        email_data = cast(Optional[EmailData], self.email_model.data(index, Qt.ItemDataRole.UserRole))
         if email_data:
             html_content = email_data.body_html or f"<pre>{email_data.body_text}</pre>"
             self.main_window.message_view.setHtml(html_content)
@@ -147,7 +147,7 @@ class AppController(QObject):
         """Opens the settings dialog."""
         current_settings = {"user": self.user, "password": self.password}
         dialog = SettingsDialog(self.main_window, settings=current_settings)
-        if dialog.exec() == QDialog.Accepted:
+        if dialog.exec() == QDialog.DialogCode.Accepted:
             new_settings = dialog.get_settings()
             self.user = new_settings.get("user", self.user)
             self.password = new_settings.get("password", self.password)
