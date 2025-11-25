@@ -1,38 +1,118 @@
-# src/common/logger.py
 import logging
+from logging import Logger, FileHandler, Formatter
 from rich.logging import RichHandler
+from typing import Optional
+from contextlib import contextmanager
+
+_default_logger: Optional[Logger] = None
 
 
-def setup_logger(name: str = "APP", level: str = "INFO") -> logging.Logger:
+def setup_logger(
+    name: str = "APP", level: str = "INFO", log_file: Optional[str] = None
+) -> Logger:
     """
-    Configures and returns a logger with a RichHandler for attractive terminal output.
-    This acts as a wrapper, allowing you to use standard logging calls (log.info, etc.)
-    while getting the visual benefits of the 'rich' library.
-
-    Args:
-        name: The name of the logger (e.g., the module name).
-        level: The logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL).
+    Initializes the default application logger.
     """
-    # Create a logger
+    global _default_logger
+
     logger = logging.getLogger(name)
-    logger.setLevel(level)
+    logger.setLevel(level.upper())
 
-    # Check if the logger already has handlers to avoid duplicate logs if called multiple times
     if not logger.handlers:
-        # Create a RichHandler for stylized output
+        # Rich terminal output
         rich_handler = RichHandler(
-            rich_tracebacks=True,  # Pretty print exceptions
-            markup=True,  # Allow rich markup in logs
+            rich_tracebacks=True,
+            markup=True,
             show_time=True,
             show_level=True,
-            show_path=False,  # Keep the output clean
+            show_path=False,
         )
-        rich_handler.setLevel(level)
-
-        # Add the handler to the logger
+        rich_handler.setLevel(level.upper())
         logger.addHandler(rich_handler)
 
-        # Prevent propagation to the root logger if it also has handlers configured
+        # Optional file logging
+        if log_file:
+            file_handler = FileHandler(log_file, encoding="utf-8")
+            file_handler.setLevel(level.upper())
+            file_formatter = Formatter(
+                "%(asctime)s | %(levelname)-8s | %(name)s | %(message)s",
+                datefmt="%Y-%m-%d %H:%M:%S",
+            )
+            file_handler.setFormatter(file_formatter)
+            logger.addHandler(file_handler)
+
         logger.propagate = False
 
+    _default_logger = logger
     return logger
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Helper to get a logger for *each class*
+# ──────────────────────────────────────────────────────────────────────────────
+
+
+def get_class_logger(obj) -> Logger:
+    """
+    Returns a logger named after the class of the object calling it.
+    Example result: 'SMTPClient', 'POP3Server', 'ComposeWindow'
+    """
+    logger = logging.getLogger(obj.__class__.__name__)
+    logger.setLevel(logging.DEBUG)
+
+    # Only attach handler once
+    if not logger.handlers and _default_logger and _default_logger.handlers:
+        for h in _default_logger.handlers:
+            logger.addHandler(h)
+
+    logger.propagate = False
+    return logger
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Convenience functions (use default logger)
+# ──────────────────────────────────────────────────────────────────────────────
+
+
+def debug(msg: str):
+    if _default_logger:
+        _default_logger.debug(msg)
+
+
+def info(msg: str):
+    if _default_logger:
+        _default_logger.info(msg)
+
+
+def warning(msg: str):
+    if _default_logger:
+        _default_logger.warning(msg)
+
+
+def error(msg: str):
+    if _default_logger:
+        _default_logger.error(msg)
+
+
+def critical(msg: str):
+    if _default_logger:
+        _default_logger.critical(msg)
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Context manager for logging code blocks
+# ──────────────────────────────────────────────────────────────────────────────
+
+
+@contextmanager
+def log_block(name: str):
+    if not _default_logger:
+        raise RuntimeError("Logger not initialized. Call setup_logger() first.")
+
+    _default_logger.info(f"START: {name}")
+    try:
+        yield
+        _default_logger.info(f"END: {name}")
+    except Exception as e:
+        _default_logger.exception(f"ERROR in {name}: {e}")
+        raise

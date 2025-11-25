@@ -14,21 +14,6 @@ Last Edited:
 from enum import Enum
 
 
-class PrintType(Enum):
-    DEBUG = ("\033[96m", 0)
-    INFO = ("\033[93m", 1)
-    ERROR = ("\033[91m", 2)
-    SUCCESS = ("\033[92m", 3)
-
-
-LOGGING_LEVEL = PrintType.INFO
-
-
-def print_info(message: str, print_type: PrintType):
-    if print_type.value[1] >= LOGGING_LEVEL.value[1]:
-        print(f"{print_type.value[0]}{message}\033[0m")
-
-
 def calculate_checksum(data: bytes) -> int:
     if len(data) % 2 == 1:
         data += b"\x00"

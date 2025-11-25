@@ -13,12 +13,8 @@ Last Edited:
 
 import pickle
 import socket
-from .rdt_util import PrintType, print_info, calculate_checksum
-
-# try:
-#     from .rdt_util import PrintType, print_info, calculate_checksum
-# except ImportError:
-#     from .rdt_util import PrintType, print_info, calculate_checksum
+from src.rdt.rdt_util import calculate_checksum
+from src.common.logger import get_class_logger
 
 
 class RDTReceiver:
@@ -38,10 +34,13 @@ class RDTReceiver:
             dst_address (str):  The address of the sender's host. Default: 127.0.0.1
             window_size (int):  The size of the window including sequence number that can be sent in the protocol. Default: 8
         """
+        self.log = get_class_logger(self)
+        self.log.info("RDTReceiver initialized")
+
         self.src_address = src_address
         self.dst_address = dst_address
         self.port = port
-        print_info(f"Receiver Ports: {port}", PrintType.INFO)
+        self.log.info(f"Receiver Ports: {port}")
 
         # Only need one socket for receiver
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -68,7 +67,7 @@ class RDTReceiver:
         try:
             self.socket.settimeout(1)  # Allows for clean shutdown
             self.conn, self.addr = self.socket.accept()
-            print_info(f"{self.conn}, {self.addr}", PrintType.DEBUG)
+            self.log.info(f"{self.conn}, {self.addr}")
             return True
         except socket.timeout:
             return False
@@ -115,7 +114,7 @@ class RDTReceiver:
             or "data" not in pkt
             or "checksum" not in pkt
         ):
-            print_info("Receiver: Packet missing required fields!", PrintType.ERROR)
+            self.log.error("Receiver: Packet missing required fields!")
             return False
 
         # Compute if the data payload contains a valid UDP checksum
@@ -124,8 +123,8 @@ class RDTReceiver:
                 {"final": pkt["final"], "seq": pkt["seq"], "data": pkt["data"]}
             )
         )
-        print_info(
-            f"Receiver: Valid Checksum {pkt['seq']}: {valid_checksum}", PrintType.DEBUG
+        self.log.debug(
+            f"Receiver: Valid Checksum {pkt['seq']}: {valid_checksum}"
         )
         return valid_checksum
 
@@ -139,11 +138,11 @@ class RDTReceiver:
             Will return early if the socket cannot be bound to the receiving port.
         """
         if not self.conn:
-            print_info("Connection not established!", PrintType.ERROR)
+            self.log.error("Connection not established!")
             return []
-        print_info(f"{self.conn}, {self.socket}", PrintType.DEBUG)
+        self.log.debug(f"{self.conn}, {self.socket}")
 
-        print_info("Receiver: Accepting Messages!", PrintType.INFO)
+        self.log.info("Receiver: Accepting Messages!")
         # Indicate that the receiver is receiving and that a termination has not been initiated.
         self.is_receiving = True
         last_pkt_received = False
@@ -154,9 +153,8 @@ class RDTReceiver:
             data = self.receive_packet()
             # Empty packet, ignore
             if data is None:
-                print_info(
-                    f"Receiver [{self.port}]: Sender has closed connection!",
-                    PrintType.INFO,
+                self.log.info(
+                    f"Receiver [{self.port}]: Sender has closed connection!"
                 )
                 self.cleanup()
                 self.is_receiving = False
@@ -172,8 +170,8 @@ class RDTReceiver:
             # If the packet includes a termination field of True, send a FIN ACK packet and terminate connection.
             if pkt["final"]:
                 last_pkt_received = True
-                print_info(
-                    f"Receiver: Received final packet at SEQ {seq_num}", PrintType.DEBUG
+                self.log.debug(
+                    f"Receiver: Received final packet at SEQ {seq_num}"
                 )
 
             # Check if the received packet is in the receiver's window
@@ -199,10 +197,10 @@ class RDTReceiver:
         return self.deliver_chunks()
 
     def deliver_chunks(self):
-        print_info(f"Receiver: {self.ordered_chunks}", PrintType.DEBUG)
+        self.log.debug(f"Receiver: {self.ordered_chunks}")
         chunks = self.ordered_chunks.copy()
         self.ordered_chunks.clear()
-        print_info(f"Receiver: {chunks}", PrintType.DEBUG)
+        self.log.debug(f"Receiver: {chunks}")
         return chunks
 
     def terminate_connection(self):
