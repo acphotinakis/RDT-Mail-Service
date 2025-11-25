@@ -61,7 +61,9 @@ def unpack_and_validate(packet_bytes: bytes) -> dict | None:
             log.debug("Packet checksum is valid.")
             return pkt_dict
         else:
-            log.warning(f"Packet validation failed: Checksum mismatch. Got {received_checksum}, expected {calculated_checksum}.")
+            log.warning(
+                f"Packet validation failed: Checksum mismatch. Got {received_checksum}, expected {calculated_checksum}."
+            )
             return None
 
     except (pickle.UnpicklingError, Exception):
