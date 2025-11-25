@@ -35,6 +35,7 @@ class RDTReceiver:
             try:
                 # rdt_rcv(rcvpkt) from wire
                 rcv_bytes, sender_addr = self.sock.recvfrom(RDT_RECV_BUFSIZE)
+                self.log.debug(f"Received {len(rcv_bytes)} bytes from {sender_addr}")
                 rcvpkt = unpack_and_validate(rcv_bytes)
 
                 # Event: corrupt(rcvpkt) OR has_seq(rcvpkt, wrong_seq)
@@ -47,7 +48,7 @@ class RDTReceiver:
                     # The last correct seq is 1 minus current expected (toggling 0/1)
                     last_correct_seq = 1 - self.expected_seq
                     self.log.debug(
-                        f"Receiver: Got corrupt or duplicate packet. Re-sending ACK {last_correct_seq}"
+                        f"Receiver: Got corrupt or duplicate packet. Re-sending ACK {last_correct_seq} to {sender_addr}"
                     )
                     sndpkt = make_ack_packet(last_correct_seq)
                     self.sock.sendto(sndpkt, sender_addr)
@@ -64,6 +65,7 @@ class RDTReceiver:
                     yield rcvpkt["data"]
 
                     # Action: sndpkt = make_pkt(ACK, expected_seq, checksum); udt_send(sndpkt)
+                    self.log.debug(f"Sending ACK {self.expected_seq} to {sender_addr}")
                     sndpkt = make_ack_packet(self.expected_seq)
                     self.sock.sendto(sndpkt, sender_addr)
 
@@ -74,7 +76,7 @@ class RDTReceiver:
                     )
 
             except Exception as e:
-                self.log.error(f"Receiver error: {e}")
+                self.log.exception("Receiver error:")
                 if not self.running:
                     break  # Allow clean exit if stopped
 

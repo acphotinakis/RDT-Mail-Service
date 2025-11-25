@@ -38,10 +38,12 @@ class RDTSender:
         while True:
             try:
                 # Action: udt_send(sndpkt) and effectively start_timer (via socket timeout)
+                self.log.debug(f"Sending packet to {self.dest_addr}")
                 self.sock.sendto(sndpkt, self.dest_addr)
 
                 # Try to receive ACK
                 rcv_bytes, _ = self.sock.recvfrom(RDT_RECV_BUFSIZE)
+                self.log.debug(f"Sender: Received {len(rcv_bytes)} bytes from receiver.")
                 rcvpkt = unpack_and_validate(rcv_bytes)
 
                 if rcvpkt is None:
@@ -75,7 +77,7 @@ class RDTSender:
                 # Loop continues, triggering retransmission at top of loop
                 continue
             except Exception as e:
-                self.log.error(f"Sender: Unexpected socket error: {e}")
+                self.log.exception("Sender: Unexpected socket error:")
                 raise e
 
     def close(self):

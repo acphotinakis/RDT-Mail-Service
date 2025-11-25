@@ -1,5 +1,9 @@
 # Path: src/rdt/states.py
 from enum import Enum
+import logging
+
+log = logging.getLogger(__name__)
+log.debug("RDT states module loaded.")
 
 
 class SenderState(Enum):
