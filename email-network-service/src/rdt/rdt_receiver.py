@@ -43,7 +43,7 @@ class RDTReceiver:
         self.log.info(f"Receiver Ports: {port}")
 
         # Only need one socket for receiver
-        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.socket.bind((src_address, port))
         self.socket.listen(1)
         self.conn = None
@@ -60,7 +60,7 @@ class RDTReceiver:
 
     def start_accepting(self):
         if not self.socket:
-            self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             self.socket.bind((self.src_address, self.port))
             self.socket.listen(1)
 
@@ -123,9 +123,7 @@ class RDTReceiver:
                 {"final": pkt["final"], "seq": pkt["seq"], "data": pkt["data"]}
             )
         )
-        self.log.debug(
-            f"Receiver: Valid Checksum {pkt['seq']}: {valid_checksum}"
-        )
+        self.log.debug(f"Receiver: Valid Checksum {pkt['seq']}: {valid_checksum}")
         return valid_checksum
 
     def receive_messages(self) -> list[bytes]:
@@ -153,9 +151,7 @@ class RDTReceiver:
             data = self.receive_packet()
             # Empty packet, ignore
             if data is None:
-                self.log.info(
-                    f"Receiver [{self.port}]: Sender has closed connection!"
-                )
+                self.log.info(f"Receiver [{self.port}]: Sender has closed connection!")
                 self.cleanup()
                 self.is_receiving = False
                 return self.deliver_chunks()
@@ -170,9 +166,7 @@ class RDTReceiver:
             # If the packet includes a termination field of True, send a FIN ACK packet and terminate connection.
             if pkt["final"]:
                 last_pkt_received = True
-                self.log.debug(
-                    f"Receiver: Received final packet at SEQ {seq_num}"
-                )
+                self.log.debug(f"Receiver: Received final packet at SEQ {seq_num}")
 
             # Check if the received packet is in the receiver's window
             if self.recv_base <= seq_num < self.recv_base + self.window_size:

@@ -69,16 +69,14 @@ class RDTSender:
         self.is_terminated = False
 
     def connect_to_receiver(self):
-        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.socket.connect((self.dst_address, self.port))
         self.is_terminated = False
 
     def send_data(self, data: list[bytes]):
         self.log.debug(f"{self.socket}, {self.listener}")
         if not self.socket:
-            self.log.error(
-                "Sender: Connection must be established before sending!"
-            )
+            self.log.error("Sender: Connection must be established before sending!")
 
         # Start our ACK listener thread to receive new ACKs
         if not self.listener:
@@ -153,9 +151,7 @@ class RDTSender:
                                 > datetime.timedelta(seconds=self.timeout)
                                 and self.is_sending
                             ):
-                                self.log.debug(
-                                    f"Sender: Retransmitting {seq}"
-                                )
+                                self.log.debug(f"Sender: Retransmitting {seq}")
                                 # Update the window with the new sending time
                                 self.window[seq] = (
                                     self.window[seq][0],
@@ -243,9 +239,7 @@ class RDTSender:
                 self.log.info(f"Sender: Socket closed or error: {str(e)}")
                 break
             except Exception as e:
-                self.log.error(
-                    f"Sender: Exception in receive_acks: {str(e)}"
-                )
+                self.log.error(f"Sender: Exception in receive_acks: {str(e)}")
                 break
 
     def terminate_connection(self):
