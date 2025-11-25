@@ -3,13 +3,13 @@ from email import message_from_string
 from email.message import Message
 from typing import List, Optional
 
-from .models import EmailData
+from src.client.frontend.models import EmailData
 
 # Assuming smtp_client exists and has a certain API
-# from ...smtp.smtp_client import SMTPClient 
+# from src.smtp.smtp_client import SMTPClient 
 
 # Assuming pop3_client exists and has a certain API
-# from ...pop3.pop3_client import POP3Client
+# from src.pop3.pop3_client import POP3Client
 
 DATABASE_PATH = "email-network-service/database/mailboxes"
 

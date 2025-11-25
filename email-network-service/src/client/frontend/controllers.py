@@ -1,9 +1,9 @@
 from PySide6.QtCore import QObject, Slot, QModelIndex, Qt, QThread, Signal
 from PySide6.QtWidgets import QDialog
 
-from .wrappers import StorageWrapper, SMTPWrapper, POP3Wrapper
-from .models import EmailListModel, EmailData
-from .views import ComposeWindow, SettingsDialog
+from src.client.frontend.wrappers import StorageWrapper, SMTPWrapper, POP3Wrapper
+from src.client.frontend.models import EmailListModel, EmailData
+from src.client.frontend.views import ComposeWindow, SettingsDialog
 from typing import Optional
 
 

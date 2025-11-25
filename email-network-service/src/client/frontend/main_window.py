@@ -1,8 +1,8 @@
 from PySide6.QtWidgets import QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QListView, QStatusBar
 from PySide6.QtGui import QKeySequence, QShortcut
 
-from .views import MessageView
-from .controllers import AppController
+from src.client.frontend.views import MessageView
+from src.client.frontend.controllers import AppController
 
 class MainWindow(QMainWindow):
     def __init__(self):
