@@ -15,7 +15,8 @@ class UserManager:
     """
 
     _instance = None
-    _lock = threading.RLock()  # Re-entrant lock for thread safety across server threads
+    # Re-entrant lock for thread safety across server threads
+    _lock = threading.RLock()
 
     def __new__(cls):
         # Ensure only one instance of UserManager exists in the application

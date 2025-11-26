@@ -19,7 +19,6 @@ class MailboxWriter:
     # ------------------------------
     # Metadata Helpers
     # ------------------------------
-
     def _load_metadata(self, metadata_path: str) -> dict:
         self.log.debug(f"Attempting to load metadata from: {metadata_path}")
 
