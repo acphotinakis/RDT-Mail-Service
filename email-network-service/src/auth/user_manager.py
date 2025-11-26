@@ -42,14 +42,17 @@ class UserManager:
                 self.log.info("No user database found. Starting fresh.")
                 # Create the database directory if it doesn't exist
                 os.makedirs(os.path.dirname(self.db_file), exist_ok=True)
+                self.log.debug(f"Created directory {os.path.dirname(self.db_file)}")
                 self._save_users()  # Initialize empty file
                 return
 
             try:
+                self.log.debug(f"Loading users from {self.db_file}")
                 with open(self.db_file, "r") as f:
                     data = json.load(f)
                     for username, user_data in data.items():
                         self.users[username] = User.from_dict(user_data)
+                        self.log.debug(f"Loaded user: {username}")
             except (json.JSONDecodeError, IOError) as e:
                 self.log.error(f"Failed to load user database: {e}")
 
@@ -57,6 +60,7 @@ class UserManager:
         """Persists current in-memory users to users.json using atomic write pattern."""
         with self._lock:
             try:
+                self.log.debug("Saving user database.")
                 # Convert cache back to dict of dicts for JSON
                 data_to_save = {u.username: u.to_dict() for u in self.users.values()}
 
@@ -72,15 +76,23 @@ class UserManager:
     def get_user(self, username: str) -> Optional[User]:
         """Retrieves a User object by username (case-insensitive)."""
         with self._lock:
-            return self.users.get(username.lower())
+            self.log.debug(f"Attempting to get user: {username}")
+            user = self.users.get(username.lower())
+            if user:
+                self.log.debug(f"User found: {username}")
+            else:
+                self.log.debug(f"User not found: {username}")
+            return user
 
     def create_user(self, username: str, password: str) -> User:
         """Creates a new user, hashes their password, saves to disk, and initializes mailbox."""
         with self._lock:
             lower_name = username.lower()
             if lower_name in self.users:
+                self.log.warning(f"Attempted to create existing user: {username}")
                 raise ValueError(f"User '{username}' already exists.")
 
+            self.log.debug(f"Creating new user: {username}")
             new_user = User(lower_name)
             new_user.set_password(password)
             self.users[lower_name] = new_user
@@ -90,10 +102,16 @@ class UserManager:
 
             # 2. Initialize physical mailbox directory
             try:
+                self.log.debug(
+                    f"Creating mailbox directory for {username} at {new_user.mailbox_path}"
+                )
                 os.makedirs(new_user.mailbox_path, exist_ok=True)
                 # Create initial empty metadata file for the Mailbox subsystem
                 metadata_path = os.path.join(new_user.mailbox_path, "metadata.json")
                 if not os.path.exists(metadata_path):
+                    self.log.debug(
+                        f"Creating metadata file for {username} at {metadata_path}"
+                    )
                     with open(metadata_path, "w") as f:
                         json.dump({"messages": []}, f)
             except OSError as e:
@@ -107,6 +125,7 @@ class UserManager:
 
     def authenticate(self, username: str, password: str) -> Optional[User]:
         """Attempts to authenticate a user. Returns User object on success, None on failure."""
+        self.log.debug(f"Attempting to authenticate user: {username}")
         # No lock needed here, get_user handles read locking, verify_password doesn't modify state
         user = self.get_user(username)
         if user and user.verify_password(password):
