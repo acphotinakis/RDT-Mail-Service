@@ -9,3 +9,6 @@ USER_DB_FILE = os.path.join(DATABASE_PATH, "users.json")
 
 # The directory holding user mailboxes
 MAILBOXES_DIR = os.path.join(DATABASE_PATH, "mailboxes")
+
+# The directory holding temp emails
+TEMP_EMAILS_DIR = os.path.join(DATABASE_PATH, "temp_emails")
