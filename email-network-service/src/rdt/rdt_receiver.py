@@ -64,7 +64,6 @@ class RDTReceiver:
                     # Action: extract(rcvpkt, data), deliver_data(data)
                     yield rcvpkt["data"]
 
-                    # Action: sndpkt = make_pkt(ACK, expected_seq, checksum); udt_send(sndpkt)
                     self.log.debug(f"Sending ACK {self.expected_seq} to {sender_addr}")
                     sndpkt = make_ack_packet(self.expected_seq)
                     self.sock.sendto(sndpkt, sender_addr)
