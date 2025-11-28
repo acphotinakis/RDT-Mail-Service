@@ -1,6 +1,3 @@
-# smtp-protocol-implementation
-SMTP Implementation for our class
-
 
 # Email System Project - Makefile Guide
 
