@@ -41,7 +41,6 @@ class UserManager:
         with self._lock:
             if not os.path.exists(self.db_file):
                 self.log.info("No user database found. Starting fresh.")
-                # Create the database directory if it doesn't exist
                 os.makedirs(os.path.dirname(self.db_file), exist_ok=True)
                 self.log.debug(f"Created directory {os.path.dirname(self.db_file)}")
                 self._save_users()  # Initialize empty file
@@ -51,24 +50,29 @@ class UserManager:
                 self.log.debug(f"Loading users from {self.db_file}")
                 with open(self.db_file, "r") as f:
                     data = json.load(f)
-                    for username, user_data in data.items():
-                        self.users[username] = User.from_dict(user_data)
-                        self.log.debug(f"Loaded user: {username}")
+                    users_list = data.get("users", [])
+                    if not isinstance(users_list, list):
+                        raise ValueError("Invalid users.json format (users is not a list)")
+                    for user_data in users_list:
+                        user = User.from_dict(user_data)
+                        self.users[user.username] = user
+                        self.log.debug(f"Loaded user: {user.username}")
             except (json.JSONDecodeError, IOError) as e:
                 self.log.error(f"Failed to load user database: {e}")
 
     def _save_users(self):
-        """Persists current in-memory users to users.json using atomic write pattern."""
+        """Persists current users to users.json using list format."""
         with self._lock:
             try:
                 self.log.debug("Saving user database.")
-                # Convert cache back to dict of dicts for JSON
-                data_to_save = {u.username: u.to_dict() for u in self.users.values()}
 
-                # Atomic write pattern: write to temp file then rename
+                # Convert user cache → list
+                users_list = [u.to_dict() for u in self.users.values()]
+
                 tmp_file = f"{self.db_file}.tmp"
                 with open(tmp_file, "w") as f:
-                    json.dump(data_to_save, f, indent=2)
+                    json.dump({"users": users_list}, f, indent=2)
+
                 os.replace(tmp_file, self.db_file)
                 self.log.debug("User database saved successfully.")
             except IOError as e:
@@ -94,8 +98,7 @@ class UserManager:
                 raise ValueError(f"User '{username}' already exists.")
 
             self.log.debug(f"Creating new user: {username}")
-            new_user = User(lower_name)
-            new_user.set_password(password)
+            new_user = User(lower_name, password)
             self.users[lower_name] = new_user
 
             # 1. Persist user credentials

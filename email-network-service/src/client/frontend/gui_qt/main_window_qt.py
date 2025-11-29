@@ -32,22 +32,26 @@ class MainWindowQt(QMainWindow, ViewInterface):
         self.emails: List[EmailData] = []
         self.selected_email_index: Optional[int] = None
 
+        # --- UI Setup ----------------------------------------------------------
         central = QWidget()
         self.setCentralWidget(central)
 
         root_layout = QVBoxLayout(central)
+
+        # Header
         header = self._build_header(root_layout)
         root_layout.addLayout(header)
 
+        # Main area
         main_area = QHBoxLayout()
         root_layout.addLayout(main_area, stretch=1)
 
-        # Email list
+        # Email list widget
         self.email_list = QListWidget()
         self.email_list.itemSelectionChanged.connect(self._on_select)
         main_area.addWidget(self.email_list, stretch=1)
 
-        # Message body
+        # Body widget
         self.body = QTextEdit()
         self.body.setReadOnly(True)
         main_area.addWidget(self.body, stretch=2)
@@ -57,7 +61,10 @@ class MainWindowQt(QMainWindow, ViewInterface):
         self.setStatusBar(self.status_bar)
         self.show_status_message("Ready")
 
+        # --- Controller Initialization (MUST BE LAST) --------------------------
         self.controller = AppController(self, username, password)
+
+        # Safe to load now because email_list exists
         self.controller.load_user_emails(self.controller.user)
 
     def _build_header(self, parent_layout):
@@ -145,5 +152,5 @@ class MainWindowQt(QMainWindow, ViewInterface):
             QMessageBox.information(self, "Delete", "Select an email first.")
             return
         confirm = QMessageBox.question(self, "Delete", "Delete this email?")
-        if confirm == QMessageBox.Yes:
+        if confirm == QMessageBox.StandardButton.Yes:
             self.controller.delete_email(self.selected_email_index)

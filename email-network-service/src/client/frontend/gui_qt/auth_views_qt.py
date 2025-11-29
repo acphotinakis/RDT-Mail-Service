@@ -36,7 +36,9 @@ class LoginDialog(QDialog):
         self.password_edit = QLineEdit()
         form.addRow("Password", self.password_edit)
 
-        buttons = QDialogButtonBox(QDialogButtonBox.accepted | QDialogButtonBox.rejected)
+        buttons = buttons = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
+        )
         buttons.accepted.connect(self._on_accept)
         buttons.rejected.connect(self.reject)
         layout.addWidget(buttons)
@@ -88,7 +90,9 @@ class SignupDialog(QDialog):
         self.confirm_edit = QLineEdit()
         form.addRow("Confirm", self.confirm_edit)
 
-        buttons = QDialogButtonBox(QDialogButtonBox.accepted | QDialogButtonBox.rejected)
+        buttons = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
+        )
         buttons.accepted.connect(self._on_accept)
         buttons.rejected.connect(self.reject)
         layout.addWidget(buttons)

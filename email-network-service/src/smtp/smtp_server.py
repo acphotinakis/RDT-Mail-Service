@@ -11,9 +11,9 @@ from email.policy import default as email_policy
 from src.common.logger import get_class_logger
 from src.rdt.rdt_receiver import RDTReceiver
 from src.rdt.rdt_sender import RDTSender
-from mailbox.storage_manager import StorageManager
+from src.mailbox.storage_manager import StorageManager
 from src.auth.user import User
-from client.frontend.models import EmailData
+from src.client.frontend.models import EmailData
 
 SMTP_EOL = b"\r\n"
 SMTP_TERMINATOR = b"\r\n.\r\n"

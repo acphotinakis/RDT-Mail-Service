@@ -4,7 +4,7 @@ from typing import Optional, Tuple, Dict, Any, List
 from src.common.logger import get_class_logger
 from src.rdt.rdt_receiver import RDTReceiver
 from src.rdt.rdt_sender import RDTSender
-from mailbox.storage_manager import StorageManager
+from src.mailbox.storage_manager import StorageManager
 from src.auth.user_manager import UserManager
 from src.auth.user import User
 

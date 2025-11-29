@@ -34,7 +34,9 @@ class ComposeDialog(QDialog):
             self.body_edit.setPlainText(self.initial["body"])
         form.addRow("Body", self.body_edit)
 
-        buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        buttons = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
+        )
         buttons.accepted.connect(self._on_accept)
         buttons.rejected.connect(self.reject)
         layout.addWidget(buttons)
@@ -52,6 +54,6 @@ class ComposeDialog(QDialog):
         self.accept()
 
     def get_data(self) -> Optional[Dict[str, str]]:
-        if self.exec() == QDialog.Accepted:
+        if self.exec() == QDialog.DialogCode.Accepted:
             return self.result_data
         return None

@@ -8,6 +8,7 @@ from src.client.frontend.controllers.auth_controller import AuthController
 import src.client.frontend.autologin_manager as autologin_manager
 from src.common.logger import setup_logger
 
+
 def run_signup_flow(auth_controller: AuthController):
     """Guides the user through the signup process."""
     error = None
@@ -28,22 +29,22 @@ def run_signup_flow(auth_controller: AuthController):
 
 def run_manual_login_flow(auth_controller: AuthController):
     """Handles the manual login process with a 3-strike rule."""
-    login_attempts = {}
-    
+    login_attempts: dict[str, int] = {}
+
     while True:
         login_view = LoginDialog(error_message=None)
         login_data = login_view.get_data()
         if not login_data:
-            return None # User cancelled
+            return None  # User cancelled
 
         current_username, current_password = login_data
-        
+
         login_result = auth_controller.login(current_username, current_password)
 
         if login_result is True:
-            return current_username, current_password # Successful login
-        
-        elif login_result is False: # Wrong password
+            return current_username, current_password  # Successful login
+
+        elif login_result is False:  # Wrong password
             attempts = login_attempts.get(current_username, 0) + 1
             login_attempts[current_username] = attempts
 
@@ -52,18 +53,20 @@ def run_manual_login_flow(auth_controller: AuthController):
                 if signup_credentials:
                     return signup_credentials
                 else:
-                    return None # User cancelled signup
+                    return None  # User cancelled signup
             else:
                 remaining = 3 - attempts
-                QMessageBox.critical(None, "Login Failed", f"Invalid password. {remaining} attempts left.")
+                QMessageBox.critical(
+                    None, "Login Failed", f"Invalid password. {remaining} attempts left."
+                )
 
-        else: # User not found
+        else:  # User not found
             QMessageBox.critical(None, "Login Failed", "Username not found.")
 
 
-def main():
+def run_frontend():
     """Handles the main application flow: auto-login -> welcome/manual login/signup -> main app."""
-    setup_logger("FRONTEND", log_file="frontend.log", level="DEBUG") # Configure frontend logger
+    setup_logger("FRONTEND", log_file="frontend.log", level="DEBUG")  # Configure frontend logger
     qt_app = QApplication(sys.argv)
     auth_controller = AuthController()
     authenticated_username, authenticated_password = None, None
@@ -83,24 +86,24 @@ def main():
         while True:
             welcome_view = WelcomeDialog()
             choice = welcome_view.get_choice()
-            if not choice: # User cancelled welcome screen
+            if not choice:  # User cancelled welcome screen
                 return
 
             if choice == "login":
                 credentials = run_manual_login_flow(auth_controller)
                 if credentials:
                     authenticated_username, authenticated_password = credentials
-                    break # Authenticated
+                    break  # Authenticated
                 else:
                     continue
             elif choice == "signup":
                 credentials = run_signup_flow(auth_controller)
                 if credentials:
                     authenticated_username, authenticated_password = credentials
-                    break # Authenticated
+                    break  # Authenticated
                 else:
                     continue
-            
+
     # 3. Start the main application with the authenticated user
     if authenticated_username and authenticated_password:
         main_window = MainWindowQt(authenticated_username, authenticated_password)
@@ -112,13 +115,13 @@ def main():
                 main_window,
                 "Remember Me",
                 "Log in automatically next time?",
-                QMessageBox.Yes | QMessageBox.No,
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             )
-            if remember_me == QMessageBox.Yes:
+            if remember_me == QMessageBox.StandardButton.Yes:
                 autologin_manager.save_credentials(authenticated_username, authenticated_password)
 
         qt_app.exec()
 
 
 if __name__ == "__main__":
-    main()
+    run_frontend()

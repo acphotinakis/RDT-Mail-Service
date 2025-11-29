@@ -22,9 +22,9 @@ class WelcomeDialog(QDialog):
             layout.addWidget(err)
 
         buttons = QDialogButtonBox()
-        login_btn = buttons.addButton("Login", QDialogButtonBox.AcceptRole)
-        signup_btn = buttons.addButton("Sign Up", QDialogButtonBox.ActionRole)
-        cancel_btn = buttons.addButton(QDialogButtonBox.Cancel)
+        login_btn = buttons.addButton("Login", QDialogButtonBox.ButtonRole.ActionRole)
+        signup_btn = buttons.addButton("Sign Up", QDialogButtonBox.ButtonRole.ActionRole)
+        cancel_btn = buttons.addButton(QDialogButtonBox.StandardButton.Cancel)
 
         login_btn.clicked.connect(lambda: self._choose("login"))
         signup_btn.clicked.connect(lambda: self._choose("signup"))
@@ -37,6 +37,6 @@ class WelcomeDialog(QDialog):
         self.accept()
 
     def get_choice(self) -> Optional[str]:
-        if self.exec() == QDialog.Accepted:
+        if self.exec() == QDialog.DialogCode.Accepted:
             return self.result_choice
         return None

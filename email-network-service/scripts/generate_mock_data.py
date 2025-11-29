@@ -30,8 +30,6 @@ EMAILS_PER_USER = 10
 # -----------------------------------------------------------------------------#
 # Directory Helpers
 # -----------------------------------------------------------------------------#
-
-
 def ensure_directories():
     """Clean and recreate mailbox + temp directories."""
     for path in (MAILBOXES_DIR, TEMP_EMAILS_DIR):
@@ -41,13 +39,12 @@ def ensure_directories():
 
 
 def ensure_users_json():
-    """Remove old users.json and recreate it empty."""
+    """Reset users.json to { 'users': [] }."""
     users_dir = os.path.dirname(USER_DB_FILE)
     os.makedirs(users_dir, exist_ok=True)
 
-    # Replace with empty structure
     with open(USER_DB_FILE, "w", encoding="utf-8") as f:
-        json.dump({}, f, indent=2)
+        json.dump({"users": []}, f, indent=2)
 
 
 # -----------------------------------------------------------------------------#
