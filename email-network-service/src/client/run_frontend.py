@@ -1,16 +1,19 @@
-from src.client.frontend.tui.auth_views import LoginView, SignupView
-from src.client.frontend.tui.main_window_rich import MainWindowRich
+import sys
+from PySide6.QtWidgets import QApplication, QMessageBox
+
+from src.client.frontend.gui_qt.auth_views_qt import LoginDialog, SignupDialog
+from src.client.frontend.gui_qt.main_window_qt import MainWindowQt
+from src.client.frontend.gui_qt.welcome_view_qt import WelcomeDialog
 from src.client.frontend.controllers.auth_controller import AuthController
 import src.client.frontend.autologin_manager as autologin_manager
-from rich.prompt import Confirm
-from src.client.frontend.tui.welcome_view import WelcomeView
 from src.common.logger import setup_logger
 
 def run_signup_flow(auth_controller: AuthController):
     """Guides the user through the signup process."""
-    signup_view = SignupView()
+    error = None
     while True:
-        signup_data = signup_view.run()
+        signup_view = SignupDialog(error_message=error)
+        signup_data = signup_view.get_data()
         if not signup_data:
             return None  # User cancelled signup
 
@@ -20,16 +23,16 @@ def run_signup_flow(auth_controller: AuthController):
         if auth_controller.signup(new_username, new_password):
             return new_username, new_password
         else:
-            signup_view.error_message = "Signup failed. Username might be taken."
+            error = "Signup failed. Username might be taken."
 
 
 def run_manual_login_flow(auth_controller: AuthController):
     """Handles the manual login process with a 3-strike rule."""
-    login_view = LoginView()
     login_attempts = {}
     
     while True:
-        login_data = login_view.run()
+        login_view = LoginDialog(error_message=None)
+        login_data = login_view.get_data()
         if not login_data:
             return None # User cancelled
 
@@ -45,7 +48,6 @@ def run_manual_login_flow(auth_controller: AuthController):
             login_attempts[current_username] = attempts
 
             if attempts >= 3:
-                login_view.error_message = "3 failed attempts. You must sign up."
                 signup_credentials = run_signup_flow(auth_controller)
                 if signup_credentials:
                     return signup_credentials
@@ -53,15 +55,16 @@ def run_manual_login_flow(auth_controller: AuthController):
                     return None # User cancelled signup
             else:
                 remaining = 3 - attempts
-                login_view.error_message = f"Invalid password. {remaining} attempts left."
+                QMessageBox.critical(None, "Login Failed", f"Invalid password. {remaining} attempts left.")
 
         else: # User not found
-            login_view.error_message = "Username not found."
+            QMessageBox.critical(None, "Login Failed", "Username not found.")
 
 
 def main():
     """Handles the main application flow: auto-login -> welcome/manual login/signup -> main app."""
     setup_logger("FRONTEND", log_file="frontend.log", level="DEBUG") # Configure frontend logger
+    qt_app = QApplication(sys.argv)
     auth_controller = AuthController()
     authenticated_username, authenticated_password = None, None
 
@@ -77,9 +80,9 @@ def main():
 
     # 2. If not auto-logged in, present welcome screen or manual login/signup
     if not authenticated_username:
-        welcome_view = WelcomeView()
         while True:
-            choice = welcome_view.run()
+            welcome_view = WelcomeDialog()
+            choice = welcome_view.get_choice()
             if not choice: # User cancelled welcome screen
                 return
 
@@ -89,25 +92,32 @@ def main():
                     authenticated_username, authenticated_password = credentials
                     break # Authenticated
                 else:
-                    welcome_view.error_message = "Login failed or cancelled. Please try again." # Or return
+                    continue
             elif choice == "signup":
                 credentials = run_signup_flow(auth_controller)
                 if credentials:
                     authenticated_username, authenticated_password = credentials
                     break # Authenticated
                 else:
-                    welcome_view.error_message = "Signup failed or cancelled. Please try again." # Or return
+                    continue
             
     # 3. Start the main application with the authenticated user
     if authenticated_username and authenticated_password:
+        main_window = MainWindowQt(authenticated_username, authenticated_password)
+        main_window.show()
+
         # Ask to save credentials if this was a manual login/signup, not auto-login
         if not saved_credentials:
-            remember_me = Confirm.ask("Log in automatically next time?")
-            if remember_me:
+            remember_me = QMessageBox.question(
+                main_window,
+                "Remember Me",
+                "Log in automatically next time?",
+                QMessageBox.Yes | QMessageBox.No,
+            )
+            if remember_me == QMessageBox.Yes:
                 autologin_manager.save_credentials(authenticated_username, authenticated_password)
 
-        app = MainWindowRich(authenticated_username, authenticated_password)
-        app.run()
+        qt_app.exec()
 
 
 if __name__ == "__main__":

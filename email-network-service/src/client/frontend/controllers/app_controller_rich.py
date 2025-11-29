@@ -16,6 +16,7 @@ class ViewInterface:
     def clear_email_content(self): ...
     def enable_refresh_button(self, enabled: bool): ...
     def logout(self): ...
+    def run_on_ui_thread(self, func, *args, **kwargs): ...
 
 
 def fetch_emails_worker(pop3_wrapper, user, password, callback):
@@ -95,9 +96,13 @@ class AppController:
 
         thread = threading.Thread(
             target=fetch_emails_worker,
-            args=(self.pop3, self.user, self.password, self.on_new_emails),
+            args=(self.pop3, self.user, self.password, self._deliver_new_emails),
         )
         thread.start()
+
+    def _deliver_new_emails(self, messages):
+        """Ensure email updates are delivered on the UI thread when needed."""
+        self.view.run_on_ui_thread(self.on_new_emails, messages)
 
     def on_new_emails(self, messages):
         if not messages:
@@ -118,4 +123,3 @@ class AppController:
     def logout(self):
         autologin_manager.delete_credentials()
         self.view.show_status_message("Logged out.")
-

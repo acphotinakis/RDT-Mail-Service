@@ -153,5 +153,9 @@ class MainWindowRich(ViewInterface):
     def enable_refresh_button(self, enabled: bool):
         self.refresh_enabled = enabled
 
+    def run_on_ui_thread(self, func, *args, **kwargs):
+        """Rich TUI is synchronous, so execute immediately."""
+        func(*args, **kwargs)
+
     def logout(self):
         self.controller.logout()
