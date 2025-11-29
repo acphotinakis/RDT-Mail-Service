@@ -11,7 +11,7 @@ from PySide6.QtWidgets import QApplication
 from src.client.frontend.main_window import MainWindow
 
 
-def main():
+def run_client_frontend():
     app = QApplication(sys.argv)
 
     # Load QSS theme
@@ -30,4 +30,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    run_client_frontend()
