@@ -1,13 +1,13 @@
 # Path: src/mailbox/mailbox_writer.py
 
-from auth.user import User
-from client.frontend.models import EmailData
-from common.config import MAILBOXES_DIR, TEMP_EMAILS_DIR
+from src.auth.user import User
+from src.client.frontend.models import EmailData
+from src.common.config import MAILBOXES_DIR, TEMP_EMAILS_DIR
 import os
 import uuid
 import time
 import json
-from common.logger import get_class_logger
+from src.common.logger import get_class_logger
 from typing import Optional
 
 

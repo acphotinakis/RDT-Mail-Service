@@ -1,9 +1,9 @@
 from typing import List, Tuple
-from common.logger import get_class_logger
-from common.config import POP3_SERVER_HOST, POP3_SERVER_PORT, CLIENT_IP, CLIENT_LISTENING_PORT
-from common.exceptions import POP3ConnectionError, POP3ProtocolError
-from rdt.rdt_sender import RDTSender
-from rdt.rdt_receiver import RDTReceiver
+from src.common.logger import get_class_logger
+from src.common.config import POP3_SERVER_HOST, POP3_SERVER_PORT, CLIENT_IP, CLIENT_LISTENING_PORT
+from src.common.exceptions import POP3ConnectionError, POP3ProtocolError
+from src.rdt.rdt_sender import RDTSender
+from src.rdt.rdt_receiver import RDTReceiver
 
 
 class POP3Client:

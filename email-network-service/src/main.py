@@ -3,7 +3,7 @@ import sys
 import threading
 import time
 
-from common.config import (
+from src.common.config import (
     SMTP_SERVER_HOST,
     SMTP_SERVER_PORT,
     POP3_SERVER_HOST,

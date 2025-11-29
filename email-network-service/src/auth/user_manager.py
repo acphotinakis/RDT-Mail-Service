@@ -3,9 +3,9 @@ import json
 import threading
 import bcrypt
 from typing import Optional, Dict
-from common.config import USER_DB_FILE, MAILBOXES_DIR
-from common.logger import get_class_logger
-from auth.user import User
+from src.common.config import USER_DB_FILE, MAILBOXES_DIR
+from src.common.logger import get_class_logger
+from src.auth.user import User
 
 
 class UserManager:
@@ -112,7 +112,7 @@ class UserManager:
                 if not os.path.exists(metadata_path):
                     self.log.debug(f"Creating metadata file for {username} at {metadata_path}")
                     with open(metadata_path, "w") as f:
-                        json.dump({"messages": []}, f)
+                        json.dump({"messages": {}}, f)
             except OSError as e:
                 self.log.error(f"Failed to create mailbox directory for {username}: {e}")
                 # Note: In a production system, you might roll back user creation here.

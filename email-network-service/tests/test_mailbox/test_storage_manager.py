@@ -1,7 +1,7 @@
 import pytest
 import os
 from mailbox.storage_manager import StorageManager
-from auth.user import User
+from src.auth.user import User
 from client.frontend.models import EmailData
 from email.message import Message
 

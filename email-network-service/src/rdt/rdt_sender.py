@@ -1,6 +1,6 @@
 # Path: src/rdt/rdt_sender.py
 import socket
-from common.logger import get_class_logger
+from src.common.logger import get_class_logger
 from .rdt_config import RDT_TIMEOUT, RDT_RECV_BUFSIZE
 from .rdt_packet import make_data_packet, unpack_and_validate
 

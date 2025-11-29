@@ -8,11 +8,11 @@ from typing import Optional, Tuple, Dict, Any
 from email.parser import BytesParser
 from email.policy import default as email_policy
 
-from common.logger import get_class_logger
-from rdt.rdt_receiver import RDTReceiver
-from rdt.rdt_sender import RDTSender
+from src.common.logger import get_class_logger
+from src.rdt.rdt_receiver import RDTReceiver
+from src.rdt.rdt_sender import RDTSender
 from mailbox.storage_manager import StorageManager
-from auth.user import User
+from src.auth.user import User
 from client.frontend.models import EmailData
 
 SMTP_EOL = b"\r\n"

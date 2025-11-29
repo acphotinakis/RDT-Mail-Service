@@ -1,8 +1,8 @@
 import pytest
 import os
 import json
-from auth.user_manager import UserManager
-from common.config import USER_DB_FILE, MAILBOXES_DIR
+from src.auth.user_manager import UserManager
+from src.common.config import USER_DB_FILE, MAILBOXES_DIR
 
 
 @pytest.fixture(autouse=True)

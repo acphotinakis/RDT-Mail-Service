@@ -2,9 +2,9 @@ import pytest
 from threading import Thread
 from time import sleep
 
-from rdt.rdt_sender import RDTSender
-from rdt.rdt_receiver import RDTReceiver
-from common.config import RDT_TIMEOUT
+from src.rdt.rdt_sender import RDTSender
+from src.rdt.rdt_receiver import RDTReceiver
+from src.common.config import RDT_TIMEOUT
 
 HOST = "127.0.0.1"
 SENDER_PORT = 9000

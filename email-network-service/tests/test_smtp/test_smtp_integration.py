@@ -4,10 +4,10 @@ from time import sleep
 
 from smtp.smtp_server import SMTPServer
 from smtp.smtp_client import SMTPClient
-from common.config import SMTP_SERVER_HOST, SMTP_SERVER_PORT
-from auth.user_manager import UserManager
+from src.common.config import SMTP_SERVER_HOST, SMTP_SERVER_PORT
+from src.auth.user_manager import UserManager
 from mailbox.storage_manager import StorageManager
-from auth.user import User
+from src.auth.user import User
 
 
 @pytest.fixture(scope="module")

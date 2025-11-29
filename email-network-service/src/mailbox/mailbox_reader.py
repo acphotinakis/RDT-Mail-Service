@@ -4,9 +4,9 @@ import os
 import json
 from typing import Dict, Optional, Tuple, List
 
-from auth.user import User
-from common.config import MAILBOXES_DIR
-from common.logger import get_class_logger
+from src.auth.user import User
+from src.common.config import MAILBOXES_DIR
+from src.common.logger import get_class_logger
 
 
 class MailboxReader:
