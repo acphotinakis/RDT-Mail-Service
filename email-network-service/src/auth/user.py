@@ -60,6 +60,6 @@ class User:
     @classmethod
     def from_dict(cls, data: dict) -> "User":
         """Deserializes user data from JSON storage."""
-        username = data["username"]
+        username = data.get("username")
         password = data.get("password")
         return cls(username, password)

@@ -11,7 +11,7 @@ from src.common.config import (
 )
 from smtp.smtp_server import SMTPServer
 from pop3.pop3_server import POP3Server
-from client.run_frontend import run_client_frontend
+from client.run_frontend import main
 
 
 def main():
@@ -70,7 +70,7 @@ def run_client():
     Starts the email client frontend.
     """
     print("Starting email client...")
-    run_client_frontend()
+    main()
 
 
 if __name__ == "__main__":

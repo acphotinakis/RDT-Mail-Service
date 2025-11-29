@@ -1,5 +1,6 @@
 # Project based - Andrew
 .venv_python_path
+email-network-service/database/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
