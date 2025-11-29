@@ -1,108 +1,80 @@
-# Path: src/rdt/rdt_receiver.py
 import socket
+from typing import Dict, Tuple, Optional, TYPE_CHECKING
 from src.common.logger import get_class_logger
-from src.rdt.rdt_config import RDT_RECV_BUFSIZE
-from src.rdt.rdt_packet import make_ack_packet, unpack_and_validate
-from typing import Optional, Dict
+from src.rdt.rdt_packet import make_ack_packet
+
+if TYPE_CHECKING:
+    from src.rdt.rdt_dispatcher import RDTDispatcher
 
 
 class RDTReceiver:
     """
-    RDT 3.0 (Stop-and-Wait) Receiver over UDP.
-    Can use a socket provided by its owner or create its own.
+    RDT 3.0 Receiver.
+    Refactored to pull data from RDTDispatcher's queue and track state per client.
     """
 
     def __init__(
         self,
-        listen_host: Optional[str] = None,
-        listen_port: Optional[int] = None,
-        sock: Optional[socket.socket] = None,
+        dispatcher: "RDTDispatcher",
         yield_addr: bool = False,
     ):
-        """
-        Initializes the receiver.
-        Args:
-            listen_host: Host to bind to (if sock is not provided).
-            listen_port: Port to bind to (if sock is not provided).
-            sock: An existing socket to use.
-            yield_addr: If True, yields (data, address) tuples. Otherwise, yields data only.
-        """
         self.log = get_class_logger(self)
+        self.dispatcher = dispatcher
         self.yield_addr = yield_addr
-        self._is_shared_socket = sock is not None
+        self.sock = dispatcher.sock
 
-        if sock:
-            self.sock = sock
-            try:
-                host, port = self.sock.getsockname()
-                self.log.info(f"RDTReceiver initialized on existing socket {host}:{port}")
-            except OSError:
-                self.log.info("RDTReceiver initialized with a non-connected socket.")
-        elif listen_host is not None and listen_port is not None:
-            self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            self.sock.bind((listen_host, listen_port))
-            self.log.info(f"RDTReceiver created and bound to {listen_host}:{listen_port}")
-        else:
-            raise ValueError("Must provide either a socket or a host/port pair.")
+        if not self.dispatcher.running:
+            self.dispatcher.start()
 
-        # RDT 3.0 State
-        self.expected_seq = 0
+        # RDT 3.0 State: Dictionary to track expected SEQ per client
+        self.expected_seqs: Dict[Tuple[str, int], int] = {}
         self.running = True
 
     def start_receiving(self):
         """
-        Generator that continuously listens for packets.
-        Yields valid, in-order data chunks to the application layer.
+        Generator that yields valid data chunks.
         """
-        self.log.info(f"Receiver: Waiting for packet SEQ {self.expected_seq} from below.")
+        self.log.info("Receiver: Listening for incoming packets...")
 
         while self.running:
-            try:
-                rcv_bytes, sender_addr = self.sock.recvfrom(RDT_RECV_BUFSIZE)
-                self.log.debug(f"Received {len(rcv_bytes)} bytes from {sender_addr}")
-                rcvpkt = unpack_and_validate(rcv_bytes)
+            queue_item = self.dispatcher.get_data_packet(timeout=1.0)
 
-                if rcvpkt is None or (not rcvpkt["is_ack"] and rcvpkt["seq"] != self.expected_seq):
-                    last_correct_seq = 1 - self.expected_seq
-                    self.log.debug(
-                        f"Receiver: Got corrupt/duplicate. Re-sending ACK {last_correct_seq} to {sender_addr}"
-                    )
-                    sndpkt = make_ack_packet(last_correct_seq)
-                    self.sock.sendto(sndpkt, sender_addr)
-                    continue
+            if queue_item is None:
+                continue
 
-                if not rcvpkt["is_ack"] and rcvpkt["seq"] == self.expected_seq:
-                    self.log.debug(
-                        f"Receiver: Received expected SEQ {self.expected_seq}. Delivering data."
-                    )
+            rcvpkt, sender_addr = queue_item
 
-                    # Yield data, optionally with address
-                    if self.yield_addr:
-                        yield rcvpkt["data"], sender_addr
-                    else:
-                        yield rcvpkt["data"]
+            expected = self.expected_seqs.get(sender_addr, 0)
 
-                    self.log.debug(f"Sending ACK {self.expected_seq} to {sender_addr}")
-                    sndpkt = make_ack_packet(self.expected_seq)
-                    self.sock.sendto(sndpkt, sender_addr)
+            if rcvpkt["seq"] != expected:
+                last_correct_seq = 1 - expected
+                self.log.debug(
+                    f"Receiver: Unexpected SEQ {rcvpkt['seq']} from {sender_addr}. Expected {expected}. Resending ACK {last_correct_seq}."
+                )
+                sndpkt = make_ack_packet(last_correct_seq)
+                self.sock.sendto(sndpkt, sender_addr)
+                continue
 
-                    self.expected_seq = 1 - self.expected_seq
-                    self.log.info(
-                        f"Receiver: Transitioned state. Now waiting for SEQ {self.expected_seq}."
-                    )
+            self.log.debug(f"Receiver: Accepted SEQ {expected} from {sender_addr}.")
 
-            except Exception:
-                if not self.running:
-                    self.log.info("Receiver loop gracefully shutting down.")
-                    break
-                self.log.exception("Receiver error:")
+            sndpkt = make_ack_packet(expected)
+            self.sock.sendto(sndpkt, sender_addr)
+
+            if self.yield_addr:
+                yield rcvpkt["data"], sender_addr
+            else:
+                yield rcvpkt["data"]
+
+            self.expected_seqs[sender_addr] = 1 - expected
+
+    def reset_state(self, addr: Tuple[str, int]):
+        """
+        Resets the sequence number state for a specific client address.
+        Call this when a client sends QUIT.
+        """
+        if addr in self.expected_seqs:
+            self.log.info(f"Resetting RDT state for {addr}")
+            del self.expected_seqs[addr]
 
     def stop(self):
-        """Stops the receiving loop. Closes the socket only if it created it."""
         self.running = False
-        if not self._is_shared_socket:
-            self.sock.close()
-            self.log.info("RDTReceiver stopped and closed its socket.")
-        else:
-            # The owner must close the shared socket to unblock recvfrom
-            self.log.info("RDTReceiver stop signal received (socket managed externally).")

@@ -1,85 +1,72 @@
-# Path: src/rdt/rdt_sender.py
 import socket
+import threading
 from src.common.logger import get_class_logger
-from .rdt_config import RDT_TIMEOUT, RDT_RECV_BUFSIZE
-from .rdt_packet import make_data_packet, unpack_and_validate
+from .rdt_config import RDT_TIMEOUT
+from .rdt_packet import make_data_packet
+
+# Import the Dispatcher type for type hinting (avoid circular import at runtime if needed)
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from src.rdt.rdt_dispatcher import RDTDispatcher
 
 
 class RDTSender:
     """
-    RDT 3.0 (Stop-and-Wait) Sender over UDP.
-    This class now uses a socket provided by its owner.
+    RDT 3.0 Sender.
+    Refactored to use RDTDispatcher for ACK handling to prevent socket monopolization.
     """
 
-    def __init__(self, dest_host: str, dest_port: int, sock: socket.socket):
-        """
-        Initializes the sender with an existing socket.
-        Args:
-            dest_host: The destination hostname or IP address.
-            dest_port: The destination port.
-            sock: The UDP socket to send from. Its timeout is used for retransmissions.
-        """
+    def __init__(self, dest_host: str, dest_port: int, dispatcher: "RDTDispatcher"):
         self.log = get_class_logger(self)
         self.dest_addr = (dest_host, dest_port)
-        self.sock = sock
+        self.dispatcher = dispatcher
 
-        # RDT 3.0 State: The sequence number next to be sent (starts at 0)
+        # Ensure dispatcher is running
+        if not self.dispatcher.running:
+            self.dispatcher.start()
+
         self.curr_seq = 0
         self.log.info(f"RDTSender initialized targeting {self.dest_addr}")
 
     def send(self, data_chunk: bytes):
         """
-        Blocking call to send one chunk of data reliably.
-        Returns only when the chunk is successfully acknowledged by the receiver.
+        Reliable send. Blocks until ACK is received or max retries exhausted.
         """
-        # Create the packet for the current sequence number
         sndpkt = make_data_packet(self.curr_seq, data_chunk)
-        self.log.debug(
-            f"Sender: Attempting to send packet SEQ {self.curr_seq} ({len(data_chunk)} bytes)"
-        )
 
-        # State: Waiting for ACK for curr_seq
-        while True:
+        max_retries = 5
+        attempts = 0
+
+        while attempts < max_retries:
+            # 1. Register intent to wait for ACK *before* sending to avoid race condition
+            ack_event = self.dispatcher.register_ack_waiter(
+                self.dest_addr[0], self.dest_addr[1], self.curr_seq
+            )
+
             try:
-                # Action: udt_send(sndpkt) and effectively start_timer (via socket timeout)
-                self.log.debug(f"Sending packet to {self.dest_addr}")
-                self.sock.sendto(sndpkt, self.dest_addr)
+                # 2. Send the packet
+                self.log.debug(f"Sender: Sending SEQ {self.curr_seq} (Attempt {attempts + 1})")
+                self.dispatcher.sock.sendto(sndpkt, self.dest_addr)
 
-                # Try to receive ACK
-                rcv_bytes, _ = self.sock.recvfrom(RDT_RECV_BUFSIZE)
-                self.log.debug(f"Sender: Received {len(rcv_bytes)} bytes from receiver.")
-                rcvpkt = unpack_and_validate(rcv_bytes)
-
-                if rcvpkt is None:
-                    # Event: corrupt(rcvpkt). Action: Do nothing, wait for timeout.
-                    self.log.warning(
-                        "Sender: Received corrupt packet while waiting for ACK. Ignoring."
-                    )
-                    continue
-
-                if rcvpkt["is_ack"] and rcvpkt["seq"] == self.curr_seq:
-                    # Event: notcorrupt(rcvpkt) && isACK(rcvpkt, curr_seq)
-                    # Action: stop_timer (happens by exiting loop), transition state.
-                    self.log.debug(
-                        f"Sender: Received correct ACK {self.curr_seq}. Transitioning state."
-                    )
-                    # Toggle sequence number between 0 and 1 for the next call
+                # 3. Wait for the Dispatcher to signal that the ACK arrived
+                if ack_event.wait(timeout=RDT_TIMEOUT):
+                    self.log.debug(f"Sender: ACK {self.curr_seq} received.")
                     self.curr_seq = 1 - self.curr_seq
-                    return  # Exit blocks, ready for next call from above
+                    return True  # Success
                 else:
-                    # Event: isACK(rcvpkt, wrong_seq). Action: Do nothing.
-                    self.log.debug(f"Sender: Received wrong ACK {rcvpkt.get('seq')}. Ignoring.")
-                    continue
+                    self.log.info(f"Sender: Timeout waiting for ACK {self.curr_seq}.")
+                    attempts += 1
 
-            except socket.timeout:
-                # Event: timeout. Action: udt_send(sndpkt), start_timer
-                self.log.info(f"Sender: Timeout waiting for ACK {self.curr_seq}. Retransmitting.")
-                # Loop continues, triggering retransmission at top of loop
-                continue
-            except Exception as e:
-                self.log.exception("Sender: Unexpected socket error:")
-                raise e
+            finally:
+                # Clean up the listener from the dispatcher
+                self.dispatcher.unregister_ack_waiter(
+                    self.dest_addr[0], self.dest_addr[1], self.curr_seq
+                )
+
+        self.log.error(f"Sender: Max retries ({max_retries}) reached. Connection lost.")
+        raise ConnectionError("Max retries reached")
 
     def close(self):
-        """Does NOT close the socket as it's shared."""
-        self.log.info("RDTSender closed (socket managed externally).")
+        # Dispatcher is shared, so we don't stop it here usually
+        pass

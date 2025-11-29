@@ -11,39 +11,40 @@ from src.config import (
 from src.common.exceptions import POP3ConnectionError, POP3ProtocolError
 from src.rdt.rdt_sender import RDTSender
 from src.rdt.rdt_receiver import RDTReceiver
+from src.rdt.rdt_dispatcher import RDTDispatcher
 
 
 class POP3Client:
     def __init__(self):
         self.log = get_class_logger(self)
 
-        # Create and bind the shared socket
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        # Use a different port than SMTP
+        self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        # Use a different port than SMTP for local testing
         self.sock.bind((CLIENT_IP, CLIENT_LISTENING_PORT + 1))
         self.sock.settimeout(RDT_TIMEOUT)
 
-        self.rdt_sender = RDTSender(POP3_SERVER_HOST, POP3_SERVER_PORT, self.sock)
+        # Init Dispatcher & RDT
+        self.dispatcher = RDTDispatcher(self.sock)
+        self.dispatcher.start()
 
-        self.rdt_receiver = RDTReceiver(
-            listen_host=None, listen_port=None, sock=self.sock, yield_addr=False
-        )
+        self.rdt_sender = RDTSender(POP3_SERVER_HOST, POP3_SERVER_PORT, self.dispatcher)
+        self.rdt_receiver = RDTReceiver(dispatcher=self.dispatcher, yield_addr=False)
         self.receiver_gen = self.rdt_receiver.start_receiving()
 
         self.is_connected = False
-        self.log.info("POP3Client initialized with a shared socket.")
+        self.log.info("POP3Client initialized with RDTDispatcher.")
 
     def connect(self):
-        self.log.debug("Starting RDT receiver and waiting for POP3 connection...")
+        self.log.debug("Connecting to POP3 Server...")
         try:
             self.receiver_gen = self.rdt_receiver.start_receiving()
-            # Initiate connection by sending an empty packet
             self.rdt_sender.send(b"")
             reply = self._get_reply()
             if not reply.startswith("+OK"):
                 raise POP3ConnectionError(f"Server not ready. Got: {reply}")
             self.is_connected = True
-            self.log.info(f"Connected to POP3 Server: {reply}")
+            self.log.info(f"Connected: {reply}")
         except Exception as e:
             self.log.error(f"Failed to connect to POP3 server: {e}")
             raise POP3ConnectionError(f"Connection failed: {e}")
@@ -110,9 +111,9 @@ class POP3Client:
         try:
             reply = self._get_reply()
             if not reply.startswith("+OK"):
-                self.log.warning(f"QUIT command did not receive +OK: {reply}")
-        except POP3ConnectionError:
-            self.log.warning("Connection closed before QUIT was acknowledged.")
+                self.log.warning(f"QUIT warning: {reply}")
+        except Exception:
+            pass
         finally:
             self.is_connected = False
             self._close()
@@ -126,48 +127,41 @@ class POP3Client:
         self.log.debug("Waiting for response...")
         try:
             packet = next(self.receiver_gen)
-
-            # receiver may or may not send address tuple depending on yield_addr flag
             if isinstance(packet, tuple):
-                data_bytes, _addr = packet
+                data_bytes, _ = packet
             else:
                 data_bytes = packet
-
             reply_str = data_bytes.decode("ascii").strip()
-
             self.log.debug(f"<<< {reply_str}")
             return reply_str
         except StopIteration:
             raise POP3ConnectionError("Connection closed unexpectedly.")
 
     def _close(self):
-        self.log.debug("Closing RDT resources.")
-        if self.rdt_receiver:
-            self.rdt_receiver.stop()
-        if self.rdt_sender:
-            self.rdt_sender.close()
-
+        self.log.debug("Closing POP3 Client.")
+        if self.dispatcher:
+            self.dispatcher.stop()
         if self.sock:
             self.sock.close()
-
         self.is_connected = False
 
     def fetch_new_emails(self, user, password) -> List[str]:
         try:
             self.connect()
             self.authenticate(user, password)
-
             _, total_size = self.stat()
             if total_size == 0:
                 return []
 
             messages_info = self.list()
-
             emails = []
             for msg_num, _ in messages_info:
                 email_content = self.retr(msg_num)
                 emails.append(email_content)
                 self.dele(msg_num)
             return emails
+        except Exception as e:
+            self.log.error(f"Error fetching emails: {e}")
+            return []
         finally:
             self.quit()

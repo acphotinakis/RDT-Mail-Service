@@ -1,0 +1,1410 @@
+
+
+===== DIRECTORY: src/rdt/ =====
+
+--- BEGIN FILE: __init__.py ---
+
+--- END FILE: __init__.py ---
+
+--- BEGIN FILE: checksum.py ---
+# Path: src/rdt/checksum.py
+import zlib
+import logging
+
+log = logging.getLogger(__name__)
+
+
+def calculate_checksum(data: bytes) -> int:
+    """
+    Computes the CRC32 checksum for the given data.
+    Ensures the result is an unsigned 32-bit integer (0 to 2^32-1).
+    """
+    log.debug(f"Calculating checksum for data of length {len(data)} bytes.")
+    checksum = zlib.crc32(data) & 0xFFFFFFFF
+    log.debug(f"Checksum calculated: {checksum}")
+    return checksum
+
+--- END FILE: checksum.py ---
+
+--- BEGIN FILE: rdt_config.py ---
+# src/rdt/rdt_config.py
+RDT_TIMEOUT = 1.0  # Seconds to wait before retransmission
+RDT_WINDOW_SIZE = 10  # GBN Window size
+RDT_RECV_BUFSIZE = 4096  # Max UDP packet size to receive
+# Max size for payload chunks to ensure the resulting JSON fits into UDP buffer
+# Adjust based on PACKET_BUFFER_SIZE in config
+MAX_PAYLOAD_SIZE = 1024
+
+--- END FILE: rdt_config.py ---
+
+--- BEGIN FILE: rdt_dispatcher.py ---
+import threading
+import queue
+import socket
+import logging
+from typing import Dict, Tuple, Optional
+from src.rdt.rdt_packet import unpack_and_validate
+from src.rdt.rdt_config import RDT_RECV_BUFSIZE
+
+logger = logging.getLogger(__name__)
+
+
+class RDTDispatcher:
+    """
+    The Central Nervous System for the RDT protocol.
+
+    It owns the UDP socket and runs a background thread to continuously
+    receive packets. It inspects every packet and routes it:
+    1. ACK Packets -> Routed to the specific RDTSender waiting for them.
+    2. Data Packets -> Pushed to a Queue for the RDTReceiver to consume.
+    """
+
+    def __init__(self, sock: socket.socket):
+        self.sock = sock
+        self.running = False
+        self._thread: Optional[threading.Thread] = None
+
+        # Queue for Application Data (consumed by RDTReceiver)
+        # Stores tuples: (packet_dict, source_address)
+        self.data_queue = queue.Queue()
+
+        # Dictionary for routing ACKs
+        # Key: (remote_ip, remote_port, sequence_number)
+        # Value: threading.Event()
+        self._ack_listeners: Dict[Tuple[str, int, int], threading.Event] = {}
+        self._ack_lock = threading.Lock()
+
+    def start(self):
+        """Starts the background listening thread."""
+        if self.running:
+            return
+        self.running = True
+        self._thread = threading.Thread(
+            target=self._listen_loop, name="RDT-Dispatcher", daemon=True
+        )
+        self._thread.start()
+        logger.info("RDT Dispatcher thread started.")
+
+    def stop(self):
+        """Stops the background thread."""
+        self.running = False
+        # We do not close the socket here, as it might be owned by the application
+        if self._thread:
+            self._thread.join(timeout=1.0)
+        logger.info("RDT Dispatcher stopped.")
+
+    def _listen_loop(self):
+        """
+        The ONLY place in the entire application that calls sock.recvfrom().
+        """
+        while self.running:
+            try:
+                # 1. Block waiting for any packet
+                raw_bytes, addr = self.sock.recvfrom(RDT_RECV_BUFSIZE)
+
+                # 2. Deserialize and Validate
+                packet = unpack_and_validate(raw_bytes)
+
+                if packet is None:
+                    # Corrupt packet, ignore
+                    continue
+
+                # 3. Route the packet
+                if packet["is_ack"]:
+                    self._handle_ack(packet, addr)
+                else:
+                    self._handle_data(packet, addr)
+
+            except socket.timeout:
+                continue  # Normal if socket has a timeout set
+            except OSError:
+                if self.running:
+                    logger.error("Socket closed unexpectedly.")
+                    self.running = False
+                break
+            except Exception as e:
+                logger.exception(f"Dispatcher error: {e}")
+
+    def _handle_ack(self, packet, addr):
+        """Fires the event if a Sender is waiting for this specific ACK."""
+        seq = packet["seq"]
+        key = (addr[0], addr[1], seq)
+
+        with self._ack_lock:
+            if key in self._ack_listeners:
+                event = self._ack_listeners[key]
+                event.set()  # Wake up the waiting Sender
+                # We don't remove it here; the Sender removes it after waking up.
+
+    def _handle_data(self, packet, addr):
+        """Pushes data to the queue for the Receiver."""
+        # Store (packet_dict, address)
+        self.data_queue.put((packet, addr))
+
+    # --- Methods for RDTSender ---
+
+    def register_ack_waiter(self, host: str, port: int, seq: int) -> threading.Event:
+        """Called by Sender BEFORE sending data."""
+        key = (host, port, seq)
+        event = threading.Event()
+        with self._ack_lock:
+            self._ack_listeners[key] = event
+        return event
+
+    def unregister_ack_waiter(self, host: str, port: int, seq: int):
+        """Called by Sender after receiving ACK or timeout."""
+        key = (host, port, seq)
+        with self._ack_lock:
+            if key in self._ack_listeners:
+                del self._ack_listeners[key]
+
+    # --- Methods for RDTReceiver ---
+
+    def get_data_packet(self, timeout=None) -> Optional[Tuple[Dict, Tuple[str, int]]]:
+        """Blocking call to get the next valid data packet."""
+        try:
+            return self.data_queue.get(block=True, timeout=timeout)
+        except queue.Empty:
+            return None
+
+--- END FILE: rdt_dispatcher.py ---
+
+--- BEGIN FILE: rdt_packet.py ---
+# Path: src/rdt/rdt_packet.py
+import pickle
+import logging
+from .checksum import calculate_checksum
+
+log = logging.getLogger(__name__)
+
+
+def get_canonical_form(pkt_dict):
+    # Create a new dict excluding the checksum for canonical representation
+    dict_for_checksum = pkt_dict.copy()
+    dict_for_checksum.pop('checksum', None)
+    # Return a pickled, sorted list of items for a stable representation
+    return pickle.dumps(sorted(dict_for_checksum.items()))
+
+
+def make_data_packet(seq_num: int, data: bytes) -> bytes:
+    """Creates a serialized DATA packet with seq number, payload, and checksum."""
+    log.debug(f"Creating DATA packet for SEQ={seq_num} with payload size={len(data)}")
+    pkt_dict = {"is_ack": False, "seq": seq_num, "data": data}
+    # Calculate checksum based on a canonical representation
+    checksum = calculate_checksum(get_canonical_form(pkt_dict))
+    pkt_dict["checksum"] = checksum
+    # Return final pickled packet including checksum
+    final_packet = pickle.dumps(pkt_dict)
+    log.debug(f"DATA packet created with size={len(final_packet)} bytes.")
+    return final_packet
+
+
+def make_ack_packet(seq_num: int) -> bytes:
+    """Creates a serialized ACK packet for a given sequence number."""
+    log.debug(f"Creating ACK packet for SEQ={seq_num}")
+    pkt_dict = {
+        "is_ack": True,
+        "seq": seq_num,
+        # ACK packets don't strictly need data payload, but structure should be consistent
+        "data": b"",
+    }
+    checksum = calculate_checksum(get_canonical_form(pkt_dict))
+    pkt_dict["checksum"] = checksum
+    final_packet = pickle.dumps(pkt_dict)
+    log.debug(f"ACK packet created with size={len(final_packet)} bytes.")
+    return final_packet
+
+
+def unpack_and_validate(packet_bytes: bytes) -> dict | None:
+    """
+    Deserializes a packet and validates its checksum.
+    Returns the packet dictionary if valid, or None if corrupt.
+    """
+    log.debug(f"Validating packet of size {len(packet_bytes)} bytes.")
+    try:
+        pkt_dict = pickle.loads(packet_bytes)
+
+        # Verify all required fields exist
+        if not all(key in pkt_dict for key in ["is_ack", "seq", "data", "checksum"]):
+            log.warning("Packet validation failed: Missing required fields.")
+            return None
+
+        received_checksum = pkt_dict["checksum"]
+
+        # Calculate checksum based on the same canonical representation
+        calculated_checksum = calculate_checksum(get_canonical_form(pkt_dict))
+
+        if received_checksum == calculated_checksum:
+            log.debug("Packet checksum is valid.")
+            return pkt_dict
+        else:
+            log.warning(
+                f"Packet validation failed: Checksum mismatch. Got {received_checksum}, expected {calculated_checksum}."
+            )
+            return None
+
+    except (pickle.UnpicklingError, Exception):
+        log.exception("Packet validation failed with an exception.")
+        return None
+--- END FILE: rdt_packet.py ---
+
+--- BEGIN FILE: rdt_receiver.py ---
+import socket
+from typing import Dict, Tuple, Optional, TYPE_CHECKING
+from src.common.logger import get_class_logger
+from src.rdt.rdt_packet import make_ack_packet
+
+if TYPE_CHECKING:
+    from src.rdt.rdt_dispatcher import RDTDispatcher
+
+
+class RDTReceiver:
+    """
+    RDT 3.0 Receiver.
+    Refactored to pull data from RDTDispatcher's queue and track state per client.
+    """
+
+    def __init__(
+        self,
+        dispatcher: "RDTDispatcher",
+        yield_addr: bool = False,
+    ):
+        self.log = get_class_logger(self)
+        self.dispatcher = dispatcher
+        self.yield_addr = yield_addr
+        self.sock = dispatcher.sock
+
+        if not self.dispatcher.running:
+            self.dispatcher.start()
+
+        # RDT 3.0 State: Dictionary to track expected SEQ per client
+        self.expected_seqs: Dict[Tuple[str, int], int] = {}
+        self.running = True
+
+    def start_receiving(self):
+        """
+        Generator that yields valid data chunks.
+        """
+        self.log.info("Receiver: Listening for incoming packets...")
+
+        while self.running:
+            queue_item = self.dispatcher.get_data_packet(timeout=1.0)
+
+            if queue_item is None:
+                continue
+
+            rcvpkt, sender_addr = queue_item
+
+            expected = self.expected_seqs.get(sender_addr, 0)
+
+            if rcvpkt["seq"] != expected:
+                last_correct_seq = 1 - expected
+                self.log.debug(
+                    f"Receiver: Unexpected SEQ {rcvpkt['seq']} from {sender_addr}. Expected {expected}. Resending ACK {last_correct_seq}."
+                )
+                sndpkt = make_ack_packet(last_correct_seq)
+                self.sock.sendto(sndpkt, sender_addr)
+                continue
+
+            self.log.debug(f"Receiver: Accepted SEQ {expected} from {sender_addr}.")
+
+            sndpkt = make_ack_packet(expected)
+            self.sock.sendto(sndpkt, sender_addr)
+
+            if self.yield_addr:
+                yield rcvpkt["data"], sender_addr
+            else:
+                yield rcvpkt["data"]
+
+            self.expected_seqs[sender_addr] = 1 - expected
+
+    def reset_state(self, addr: Tuple[str, int]):
+        """
+        Resets the sequence number state for a specific client address.
+        Call this when a client sends QUIT.
+        """
+        if addr in self.expected_seqs:
+            self.log.info(f"Resetting RDT state for {addr}")
+            del self.expected_seqs[addr]
+
+    def stop(self):
+        self.running = False
+
+--- END FILE: rdt_receiver.py ---
+
+--- BEGIN FILE: rdt_sender.py ---
+import socket
+import threading
+from src.common.logger import get_class_logger
+from .rdt_config import RDT_TIMEOUT
+from .rdt_packet import make_data_packet
+
+# Import the Dispatcher type for type hinting (avoid circular import at runtime if needed)
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from src.rdt.rdt_dispatcher import RDTDispatcher
+
+
+class RDTSender:
+    """
+    RDT 3.0 Sender.
+    Refactored to use RDTDispatcher for ACK handling to prevent socket monopolization.
+    """
+
+    def __init__(self, dest_host: str, dest_port: int, dispatcher: "RDTDispatcher"):
+        self.log = get_class_logger(self)
+        self.dest_addr = (dest_host, dest_port)
+        self.dispatcher = dispatcher
+
+        # Ensure dispatcher is running
+        if not self.dispatcher.running:
+            self.dispatcher.start()
+
+        self.curr_seq = 0
+        self.log.info(f"RDTSender initialized targeting {self.dest_addr}")
+
+    def send(self, data_chunk: bytes):
+        """
+        Reliable send. Blocks until ACK is received or max retries exhausted.
+        """
+        sndpkt = make_data_packet(self.curr_seq, data_chunk)
+
+        max_retries = 5
+        attempts = 0
+
+        while attempts < max_retries:
+            # 1. Register intent to wait for ACK *before* sending to avoid race condition
+            ack_event = self.dispatcher.register_ack_waiter(
+                self.dest_addr[0], self.dest_addr[1], self.curr_seq
+            )
+
+            try:
+                # 2. Send the packet
+                self.log.debug(f"Sender: Sending SEQ {self.curr_seq} (Attempt {attempts + 1})")
+                self.dispatcher.sock.sendto(sndpkt, self.dest_addr)
+
+                # 3. Wait for the Dispatcher to signal that the ACK arrived
+                if ack_event.wait(timeout=RDT_TIMEOUT):
+                    self.log.debug(f"Sender: ACK {self.curr_seq} received.")
+                    self.curr_seq = 1 - self.curr_seq
+                    return True  # Success
+                else:
+                    self.log.info(f"Sender: Timeout waiting for ACK {self.curr_seq}.")
+                    attempts += 1
+
+            finally:
+                # Clean up the listener from the dispatcher
+                self.dispatcher.unregister_ack_waiter(
+                    self.dest_addr[0], self.dest_addr[1], self.curr_seq
+                )
+
+        self.log.error(f"Sender: Max retries ({max_retries}) reached. Connection lost.")
+        raise ConnectionError("Max retries reached")
+
+    def close(self):
+        # Dispatcher is shared, so we don't stop it here usually
+        pass
+
+--- END FILE: rdt_sender.py ---
+
+--- BEGIN FILE: states.py ---
+# Path: src/rdt/states.py
+from enum import Enum
+import logging
+
+log = logging.getLogger(__name__)
+log.debug("RDT states module loaded.")
+
+
+class SenderState(Enum):
+    WAIT_FOR_CALL_0 = 0  # Waiting for data from app to send with SEQ 0
+    WAIT_FOR_ACK_0 = 1  # Waiting for ACK 0 from network
+    WAIT_FOR_CALL_1 = 2  # Waiting for data from app to send with SEQ 1
+    WAIT_FOR_ACK_1 = 3  # Waiting for ACK 1 from network
+
+
+class ReceiverState(Enum):
+    WAIT_FOR_0 = 0  # Waiting for packet SEQ 0 from below
+    WAIT_FOR_1 = 1  # Waiting for packet SEQ 1 from below
+
+--- END FILE: states.py ---
+
+
+===== DIRECTORY: src/pop3 =====
+
+--- BEGIN FILE: __init__.py ---
+
+--- END FILE: __init__.py ---
+
+--- BEGIN FILE: pop3_client.py ---
+import socket
+from typing import List, Tuple
+from src.common.logger import get_class_logger
+from src.config import (
+    POP3_SERVER_HOST,
+    POP3_SERVER_PORT,
+    CLIENT_IP,
+    CLIENT_LISTENING_PORT,
+    RDT_TIMEOUT,
+)
+from src.common.exceptions import POP3ConnectionError, POP3ProtocolError
+from src.rdt.rdt_sender import RDTSender
+from src.rdt.rdt_receiver import RDTReceiver
+from src.rdt.rdt_dispatcher import RDTDispatcher
+
+
+class POP3Client:
+    def __init__(self):
+        self.log = get_class_logger(self)
+
+        self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        # Use a different port than SMTP for local testing
+        self.sock.bind((CLIENT_IP, CLIENT_LISTENING_PORT + 1))
+        self.sock.settimeout(RDT_TIMEOUT)
+
+        # Init Dispatcher & RDT
+        self.dispatcher = RDTDispatcher(self.sock)
+        self.dispatcher.start()
+
+        self.rdt_sender = RDTSender(POP3_SERVER_HOST, POP3_SERVER_PORT, self.dispatcher)
+        self.rdt_receiver = RDTReceiver(dispatcher=self.dispatcher, yield_addr=False)
+        self.receiver_gen = self.rdt_receiver.start_receiving()
+
+        self.is_connected = False
+        self.log.info("POP3Client initialized with RDTDispatcher.")
+
+    def connect(self):
+        self.log.debug("Connecting to POP3 Server...")
+        try:
+            self.receiver_gen = self.rdt_receiver.start_receiving()
+            self.rdt_sender.send(b"")
+            reply = self._get_reply()
+            if not reply.startswith("+OK"):
+                raise POP3ConnectionError(f"Server not ready. Got: {reply}")
+            self.is_connected = True
+            self.log.info(f"Connected: {reply}")
+        except Exception as e:
+            self.log.error(f"Failed to connect to POP3 server: {e}")
+            raise POP3ConnectionError(f"Connection failed: {e}")
+
+    def authenticate(self, user: str, password: str):
+        self._send_command(f"USER {user}")
+        reply = self._get_reply()
+        if not reply.startswith("+OK"):
+            raise POP3ProtocolError(f"USER command failed: {reply}")
+
+        self._send_command(f"PASS {password}")
+        reply = self._get_reply()
+        if not reply.startswith("+OK"):
+            raise POP3ProtocolError(f"PASS command failed: {reply}")
+        self.log.info(f"Successfully authenticated as {user}")
+
+    def stat(self) -> Tuple[int, int]:
+        self._send_command("STAT")
+        reply = self._get_reply()
+        if not reply.startswith("+OK"):
+            raise POP3ProtocolError(f"STAT command failed: {reply}")
+        parts = reply.split()
+        return int(parts[1]), int(parts[2])
+
+    def list(self) -> List[Tuple[int, int]]:
+        self._send_command("LIST")
+        reply = self._get_reply()
+        if not reply.startswith("+OK"):
+            raise POP3ProtocolError(f"LIST command failed: {reply}")
+
+        messages = []
+        while True:
+            line = self._get_reply()
+            if line == ".":
+                break
+            parts = line.split()
+            messages.append((int(parts[0]), int(parts[1])))
+        return messages
+
+    def retr(self, msg_num: int) -> str:
+        self._send_command(f"RETR {msg_num}")
+        reply = self._get_reply()
+        if not reply.startswith("+OK"):
+            raise POP3ProtocolError(f"RETR command failed: {reply}")
+
+        email_lines = []
+        while True:
+            line = self._get_reply()
+            if line == ".":
+                break
+            email_lines.append(line)
+        return "\n".join(email_lines)
+
+    def dele(self, msg_num: int):
+        self._send_command(f"DELE {msg_num}")
+        reply = self._get_reply()
+        if not reply.startswith("+OK"):
+            raise POP3ProtocolError(f"DELE command failed: {reply}")
+
+    def quit(self):
+        if not self.is_connected:
+            return
+        self._send_command("QUIT")
+        try:
+            reply = self._get_reply()
+            if not reply.startswith("+OK"):
+                self.log.warning(f"QUIT warning: {reply}")
+        except Exception:
+            pass
+        finally:
+            self.is_connected = False
+            self._close()
+
+    def _send_command(self, cmd: str):
+        full_cmd = cmd + "\r\n"
+        self.log.debug(f">>> {cmd}")
+        self.rdt_sender.send(full_cmd.encode("ascii"))
+
+    def _get_reply(self) -> str:
+        self.log.debug("Waiting for response...")
+        try:
+            packet = next(self.receiver_gen)
+            if isinstance(packet, tuple):
+                data_bytes, _ = packet
+            else:
+                data_bytes = packet
+            reply_str = data_bytes.decode("ascii").strip()
+            self.log.debug(f"<<< {reply_str}")
+            return reply_str
+        except StopIteration:
+            raise POP3ConnectionError("Connection closed unexpectedly.")
+
+    def _close(self):
+        self.log.debug("Closing POP3 Client.")
+        if self.dispatcher:
+            self.dispatcher.stop()
+        if self.sock:
+            self.sock.close()
+        self.is_connected = False
+
+    def fetch_new_emails(self, user, password) -> List[str]:
+        try:
+            self.connect()
+            self.authenticate(user, password)
+            _, total_size = self.stat()
+            if total_size == 0:
+                return []
+
+            messages_info = self.list()
+            emails = []
+            for msg_num, _ in messages_info:
+                email_content = self.retr(msg_num)
+                emails.append(email_content)
+                self.dele(msg_num)
+            return emails
+        except Exception as e:
+            self.log.error(f"Error fetching emails: {e}")
+            return []
+        finally:
+            self.quit()
+
+--- END FILE: pop3_client.py ---
+
+--- BEGIN FILE: pop3_server.py ---
+import threading
+from typing import Optional, Tuple, Dict, Any, List
+
+from src.common.logger import get_class_logger
+from src.rdt.rdt_receiver import RDTReceiver
+from src.rdt.rdt_sender import RDTSender
+from src.rdt.rdt_dispatcher import RDTDispatcher
+from src.mailbox.storage_manager import StorageManager
+from src.auth.user_manager import UserManager
+from src.auth.user import User
+import socket
+
+
+class POP3Server:
+    def __init__(self, host: str, port: int):
+        self.log = get_class_logger(self)
+        self.log.info("Initializing POP3 server module...")
+        self.host = host
+        self.port = port
+
+        self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.sock.bind((host, port))
+
+        self.dispatcher = RDTDispatcher(self.sock)
+        self.rdt_receiver = RDTReceiver(dispatcher=self.dispatcher, yield_addr=True)
+
+        self._senders: Dict[Tuple[str, int], RDTSender] = {}
+        self.storage = StorageManager()
+        self.user_manager = UserManager()
+        self._running = False
+        self._thread: Optional[threading.Thread] = None
+
+        self.log.info(f"POP3 server initialized on {self.host}:{self.port}")
+
+    def _get_sender(self, addr: Tuple[str, int]) -> RDTSender:
+        if addr not in self._senders:
+            host, port = addr
+            self.log.debug(f"Allocating new RDTSender for {addr}")
+            self._senders[addr] = RDTSender(host, port, self.dispatcher)
+        return self._senders[addr]
+
+    def _send_reply(self, addr: Tuple[str, int], msg: str):
+        if not msg.endswith("\r\n"):
+            msg += "\r\n"
+        try:
+            sender = self._get_sender(addr)
+            sender.send(msg.encode("ascii", errors="replace"))
+            self.log.debug(f"[POP3 → {addr}] {msg.strip()}")
+        except ConnectionError:
+            self.log.error(f"Failed to reply to {addr}. Connection lost.")
+        except Exception as e:
+            self.log.exception(f"Error sending POP3 reply to {addr}: {e}")
+
+    def _create_session(self) -> Dict[str, Any]:
+        return {
+            "state": "AUTHORIZATION",
+            "user": None,
+            "marked_for_deletion": set(),
+        }
+
+    def _serve_loop(self):
+        self.log.info("POP3 serve loop running...")
+
+        self.dispatcher.start()
+
+        sessions: Dict[Tuple[str, int], Dict] = {}
+
+        for packet in self.rdt_receiver.start_receiving():
+            if not self._running:
+                break
+
+            try:
+                data, addr = packet
+            except Exception:
+                continue
+
+            if addr not in sessions:
+                sessions[addr] = self._create_session()
+                self._send_reply(addr, "+OK POP3 server ready")
+                self.log.info(f"New POP3 session created for client {addr}")
+
+            session = sessions[addr]
+            lines = data.decode("ascii", errors="ignore").split("\r\n")
+            for line in lines:
+                if not line:
+                    continue
+                self.log.debug(f"[POP3 CMD from {addr}] {line!r}")
+                self._handle_command(addr, session, line, sessions)
+
+    def _handle_command(self, addr, session, line, sessions):
+        parts = line.strip().split()
+        if not parts:
+            return
+        command = parts[0].upper()
+        args = parts[1:]
+
+        handler = getattr(self, f"_cmd_{command}", None)
+        if handler:
+            handler(addr, session, args)
+        else:
+            self._send_reply(addr, "-ERR Unknown command")
+
+    def _cmd_USER(self, addr, session, args):
+        if session["state"] != "AUTHORIZATION":
+            return self._send_reply(addr, "-ERR Command not allowed here")
+        if not args:
+            return self._send_reply(addr, "-ERR Missing argument")
+
+        username = args[0]
+        if self.user_manager.get_user(username):
+            session["user"] = username
+            self._send_reply(addr, f"+OK User {username} accepted")
+        else:
+            self._send_reply(addr, "-ERR No such user")
+
+    def _cmd_PASS(self, addr, session, args):
+        if session["state"] != "AUTHORIZATION" or not session["user"]:
+            return self._send_reply(addr, "-ERR Command not allowed here")
+        session["state"] = "TRANSACTION"
+        self._send_reply(addr, "+OK Mailbox open")
+
+    def _cmd_STAT(self, addr, session, args):
+        if session["state"] != "TRANSACTION":
+            return self._send_reply(addr, "-ERR Command not allowed here")
+        user = User(session["user"])
+        messages = self.storage.list_messages(user)
+        undeleted_messages = [
+            msg for i, msg in enumerate(messages, 1) if i not in session["marked_for_deletion"]
+        ]
+        total_size = sum(msg[1] for msg in undeleted_messages)
+        self._send_reply(addr, f"+OK {len(undeleted_messages)} {total_size}")
+
+    def _cmd_LIST(self, addr, session, args):
+        if session["state"] != "TRANSACTION":
+            return self._send_reply(addr, "-ERR Command not allowed here")
+        user = User(session["user"])
+        messages = self.storage.list_messages(user)
+
+        if not args:
+            self._send_reply(addr, f"+OK {len(messages)} messages")
+            for i, msg in enumerate(messages, 1):
+                if i not in session["marked_for_deletion"]:
+                    self._send_reply(addr, f"{i} {msg[1]}")
+            self._send_reply(addr, ".")
+        else:
+            try:
+                msg_num = int(args[0])
+                if 1 <= msg_num <= len(messages) and msg_num not in session["marked_for_deletion"]:
+                    size = messages[msg_num - 1][1]
+                    self._send_reply(addr, f"+OK {msg_num} {size}")
+                else:
+                    self._send_reply(addr, f"-ERR No such message")
+            except (ValueError, IndexError):
+                self._send_reply(addr, "-ERR Invalid message number")
+
+    def _cmd_RETR(self, addr, session, args):
+        if session["state"] != "TRANSACTION":
+            return self._send_reply(addr, "-ERR Command not allowed here")
+        if not args:
+            return self._send_reply(addr, "-ERR Missing argument")
+
+        try:
+            msg_num = int(args[0])
+            user = User(session["user"])
+            messages = self.storage.list_messages(user)
+            if 1 <= msg_num <= len(messages) and msg_num not in session["marked_for_deletion"]:
+                filename = messages[msg_num - 1][0]
+                content = self.storage.get_message_content(user, filename)
+                if content:
+                    self._send_reply(addr, f"+OK {len(content)} octets")
+                    self._get_sender(addr).send(content.encode("ascii"))
+                    self._send_reply(addr, ".")
+                else:
+                    self._send_reply(addr, f"-ERR could not retrieve message")
+            else:
+                self._send_reply(addr, f"-ERR No such message")
+        except (ValueError, IndexError):
+            self._send_reply(addr, "-ERR Invalid message number")
+
+    def _cmd_DELE(self, addr, session, args):
+        if session["state"] != "TRANSACTION":
+            return self._send_reply(addr, "-ERR Command not allowed here")
+        try:
+            msg_num = int(args[0])
+            user = User(session["user"])
+            messages = self.storage.list_messages(user)
+            if 1 <= msg_num <= len(messages) and msg_num not in session["marked_for_deletion"]:
+                session["marked_for_deletion"].add(msg_num)
+                self._send_reply(addr, f"+OK Message {msg_num} deleted")
+            else:
+                self._send_reply(addr, f"-ERR Message {msg_num} already deleted or does not exist")
+        except (ValueError, IndexError):
+            self._send_reply(addr, "-ERR Invalid message number")
+
+    def _cmd_QUIT(self, addr, session, args):
+        user = User(session["user"])
+        if session["state"] == "TRANSACTION":
+            messages = self.storage.list_messages(user)
+            marked_for_deletion = sorted(list(session["marked_for_deletion"]), reverse=True)
+            for msg_num in marked_for_deletion:
+                filename = messages[msg_num - 1][0]
+                self.storage.delete_email(user, filename)
+
+        self._send_reply(addr, "+OK POP3 server signing off")
+        self._senders.pop(addr, None)
+        # Reset RDT state for this client
+        self.rdt_receiver.reset_state(addr)
+
+    def start(self):
+        if self._running:
+            return
+        self._running = True
+        self._thread = threading.Thread(
+            target=self._serve_loop, name="pop3-serve-loop", daemon=True
+        )
+        self._thread.start()
+        self.log.info("POP3 server started.")
+
+    def stop(self):
+        if not self._running:
+            return
+        self._running = False
+        try:
+            self.dispatcher.stop()
+        except Exception:
+            self.log.exception("Error stopping Dispatcher")
+        if self._thread:
+            self._thread.join(timeout=2.0)
+        self.log.info("POP3 server stopped.")
+
+--- END FILE: pop3_server.py ---
+
+
+===== DIRECTORY: src/server =====
+
+--- BEGIN FILE: __init__.py ---
+
+--- END FILE: __init__.py ---
+
+--- BEGIN FILE: run_pop3_server.py ---
+import sys
+import time
+from src.config import POP3_SERVER_HOST, POP3_SERVER_PORT
+from pop3.pop3_server import POP3Server
+
+
+def main():
+    """
+    Initializes and starts the POP3 server.
+    """
+    print("Starting POP3 server...")
+    server = POP3Server(POP3_SERVER_HOST, POP3_SERVER_PORT)
+    server.start()
+    print(f"POP3 Server running on {POP3_SERVER_HOST}:{POP3_SERVER_PORT}")
+
+    try:
+        while True:
+            time.sleep(1)
+    except KeyboardInterrupt:
+        print("\nStopping POP3 server...")
+        server.stop()
+        print("POP3 server stopped.")
+        sys.exit(0)
+
+
+if __name__ == "__main__":
+    main()
+
+--- END FILE: run_pop3_server.py ---
+
+--- BEGIN FILE: run_smtp_server.py ---
+import sys
+import threading
+import time
+from src.config import SMTP_SERVER_HOST, SMTP_SERVER_PORT
+from smtp.smtp_server import SMTPServer
+
+
+def main():
+    """
+    Initializes and starts the SMTP server.
+    """
+    print("Starting SMTP server...")
+    server = SMTPServer(SMTP_SERVER_HOST, SMTP_SERVER_PORT)
+    server.start()
+    print(f"SMTP Server running on {SMTP_SERVER_HOST}:{SMTP_SERVER_PORT}")
+
+    try:
+        while True:
+            time.sleep(1)
+    except KeyboardInterrupt:
+        print("\nStopping SMTP server...")
+        server.stop()
+        print("SMTP server stopped.")
+        sys.exit(0)
+
+
+if __name__ == "__main__":
+    main()
+
+--- END FILE: run_smtp_server.py ---
+
+
+===== DIRECTORY: src/smtp =====
+
+--- BEGIN FILE: __init__.py ---
+
+--- END FILE: __init__.py ---
+
+--- BEGIN FILE: smtp_client.py ---
+import time
+import socket
+from typing import Optional
+from src.common.logger import get_class_logger
+from src.config import (
+    SMTP_SERVER_HOST,
+    SMTP_SERVER_PORT,
+    CLIENT_IP,
+    CLIENT_LISTENING_PORT,
+    RDT_TIMEOUT,
+)
+from src.common.exceptions import SMTPProtocolError, SMTPConnectionError
+from src.rdt.rdt_sender import RDTSender
+from src.rdt.rdt_receiver import RDTReceiver
+from src.rdt.rdt_dispatcher import RDTDispatcher
+
+# SMTP Response Codes
+SMTP_READY = 220
+SMTP_OK = 250
+SMTP_CLOSING = 221
+SMTP_START_INPUT = 354
+
+
+class SMTPClient:
+    """
+    An SMTP client that uses the RDTDispatcher to multiplex a single socket
+    for both sending and receiving.
+    """
+
+    def __init__(self):
+        self.log = get_class_logger(self)
+
+        # 1. Create and Bind Shared Socket
+        self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        # Allow reuse address to avoid "Address already in use" during rapid testing
+        self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        self.sock.bind((CLIENT_IP, CLIENT_LISTENING_PORT))
+        self.sock.settimeout(RDT_TIMEOUT)
+
+        # 2. Init Dispatcher
+        self.dispatcher = RDTDispatcher(self.sock)
+        self.dispatcher.start()
+
+        # 3. Init Sender & Receiver
+        self.rdt_sender = RDTSender(SMTP_SERVER_HOST, SMTP_SERVER_PORT, self.dispatcher)
+
+        # yield_addr=False because we know who we are talking to (the server)
+        self.rdt_receiver = RDTReceiver(dispatcher=self.dispatcher, yield_addr=False)
+        self.receiver_gen = self.rdt_receiver.start_receiving()
+
+        self.is_connected = False
+        self.log.info("SMTPClient initialized with RDTDispatcher.")
+
+    def send_email(self, sender: str, recipient: str, subject: str, body: str) -> bool:
+        self.log.info(f"Starting email transaction to {recipient}...")
+        try:
+            self._connect()
+            self._do_handshake()
+            self._send_mail_from(sender)
+            self._send_rcpt_to(recipient)
+            self._send_data(subject, body)
+            self._send_quit()
+            self.log.info("Email transaction completed successfully.")
+            return True
+
+        except (SMTPProtocolError, SMTPConnectionError) as e:
+            self.log.error(f"Email transaction failed: {e}")
+            if self.is_connected:
+                try:
+                    self._send_command("QUIT")
+                except:
+                    pass
+            return False
+        except ConnectionError:
+            self.log.error("Fatal RDT connection error (max retries reached).")
+            return False
+        except Exception as e:
+            self.log.exception(f"Unexpected error: {e}")
+            return False
+        finally:
+            self._close()
+
+    def _connect(self):
+        self.log.debug("Connecting to SMTP Server...")
+        try:
+            # Re-initialize generator to ensure clean state
+            self.receiver_gen = self.rdt_receiver.start_receiving()
+
+            # Send empty packet to trigger server 220 welcome
+            self.rdt_sender.send(b"")
+
+            code, msg = self._get_reply()
+            if code != SMTP_READY:
+                raise SMTPConnectionError(f"Server not ready. Got: {code} {msg}")
+
+            self.is_connected = True
+            self.log.info(f"Connected: {msg}")
+
+        except Exception as e:
+            raise SMTPConnectionError(f"Connection failed: {e}")
+
+    def _do_handshake(self):
+        self._send_command("HELO localhost")
+        code, msg = self._get_reply()
+        if code != SMTP_OK:
+            raise SMTPProtocolError(f"HELO failed. Got: {code} {msg}")
+
+    def _send_mail_from(self, sender: str):
+        self._send_command(f"MAIL FROM:<{sender}>")
+        code, msg = self._get_reply()
+        if code != SMTP_OK:
+            raise SMTPProtocolError(f"MAIL FROM failed. Got: {code} {msg}")
+
+    def _send_rcpt_to(self, recipient: str):
+        self._send_command(f"RCPT TO:<{recipient}>")
+        code, msg = self._get_reply()
+        if code != SMTP_OK:
+            raise SMTPProtocolError(f"RCPT TO failed. Got: {code} {msg}")
+
+    def _send_data(self, subject: str, body: str):
+        self._send_command("DATA")
+        code, msg = self._get_reply()
+        if code != SMTP_START_INPUT:
+            raise SMTPProtocolError(f"DATA command not accepted. Got: {code} {msg}")
+
+        email_payload = f"Subject: {subject}\r\n\r\n{body}\r\n.\r\n"
+        self.log.debug(f"Sending email payload ({len(email_payload)} bytes).")
+        self.rdt_sender.send(email_payload.encode("ascii"))
+
+        code, msg = self._get_reply()
+        if code != SMTP_OK:
+            raise SMTPProtocolError(f"Data transmission failed. Got: {code} {msg}")
+
+    def _send_quit(self):
+        self._send_command("QUIT")
+        try:
+            code, msg = self._get_reply()
+            self.log.debug(f"Server quit response: {code} {msg}")
+        except Exception:
+            pass
+        self.is_connected = False
+
+    def _send_command(self, cmd: str):
+        full_cmd = cmd + "\r\n"
+        self.log.debug(f">>> {cmd}")
+        self.rdt_sender.send(full_cmd.encode("ascii"))
+
+    def _get_reply(self) -> tuple[int, str]:
+        self.log.debug("Waiting for response...")
+        try:
+            # This now pulls from the Dispatcher Queue via the generator
+            packet = next(self.receiver_gen)
+
+            if isinstance(packet, tuple):
+                data_bytes, _ = packet
+            else:
+                data_bytes = packet
+
+            reply_str = data_bytes.decode("ascii").strip()
+            self.log.debug(f"<<< {reply_str}")
+
+            if len(reply_str) < 3 or not reply_str[:3].isdigit():
+                raise SMTPProtocolError(f"Malformed server reply: {reply_str}")
+
+            code = int(reply_str[:3])
+            msg = reply_str[4:] if len(reply_str) > 4 else ""
+            return code, msg
+
+        except StopIteration:
+            raise SMTPConnectionError("Server closed connection unexpectedly.")
+        except Exception as e:
+            raise e
+
+    def _close(self):
+        self.log.debug("Closing SMTP Client.")
+        if self.dispatcher:
+            self.dispatcher.stop()
+
+        # Dispatcher does not close socket automatically to allow reuse logic if needed,
+        # but here we own the socket.
+        if self.sock:
+            self.sock.close()
+
+        self.is_connected = False
+
+--- END FILE: smtp_client.py ---
+
+--- BEGIN FILE: smtp_server.py ---
+import re
+import threading
+from enum import Enum, auto
+from typing import Optional, Tuple, Dict, Any
+import socket
+
+from email.parser import BytesParser
+from email.policy import default as email_policy
+
+from src.common.logger import get_class_logger
+from src.rdt.rdt_receiver import RDTReceiver
+from src.rdt.rdt_sender import RDTSender
+from src.rdt.rdt_dispatcher import RDTDispatcher
+from src.mailbox.storage_manager import StorageManager
+from src.auth.user import User
+from src.client.frontend.models import EmailData
+
+SMTP_EOL = b"\r\n"
+SMTP_TERMINATOR = b"\r\n.\r\n"
+_re_cmd = re.compile(r"^([A-Za-z]+)(?:\s+(.*))?$")
+
+
+class SMTPState(Enum):
+    WAIT_FOR_HELO = auto()
+    WAIT_FOR_MAIL_FROM = auto()
+    WAIT_FOR_RCPT_TO = auto()
+    WAIT_FOR_DATA_CMD = auto()
+    READING_DATA_STREAM = auto()
+
+
+def _parse_angle_addr(arg: str) -> Optional[str]:
+    if not arg:
+        return None
+    arg = arg.strip()
+    if arg.startswith("<") and arg.endswith(">"):
+        arg = arg[1:-1].strip()
+    return arg if "@" in arg else None
+
+
+class SMTPServer:
+
+    def __init__(self, host: str, port: int):
+        self.log = get_class_logger(self)
+        self.log.info("Initializing SMTP server module...")
+
+        self.host = host
+        self.port = port
+
+        self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.sock.bind((host, port))
+
+        self.dispatcher = RDTDispatcher(self.sock)
+        self.rdt_receiver = RDTReceiver(dispatcher=self.dispatcher, yield_addr=True)
+
+        self._senders: Dict[Tuple[str, int], RDTSender] = {}
+        self.storage = StorageManager()
+        self._running = False
+        self._thread = None
+
+        self.log.info(f"SMTP server initialized on {self.host}:{self.port}")
+
+    def _get_sender(self, addr: Tuple[str, int]) -> RDTSender:
+        if addr not in self._senders:
+            host, port = addr
+            self.log.debug(f"Allocating new RDTSender for {addr}")
+            self._senders[addr] = RDTSender(host, port, self.dispatcher)
+        return self._senders[addr]
+
+    def _send_reply(self, addr: Tuple[str, int], msg: str):
+        if not msg.endswith("\r\n"):
+            msg += "\r\n"
+
+        try:
+            sender = self._get_sender(addr)
+            sender.send(msg.encode("ascii"))
+            self.log.debug(f"[SMTP → {addr}] {msg.strip()}")
+        except ConnectionError:
+            self.log.error(f"Failed to send reply to {addr}. Client likely disconnected.")
+        except Exception as e:
+            self.log.exception(f"Unexpected error sending reply to {addr}: {e}")
+
+    def _create_session(self) -> Dict[str, Any]:
+        return {
+            "state": SMTPState.WAIT_FOR_HELO,
+            "mail_from": None,
+            "rcpt_to": [],
+            "data_buffer": bytearray(),
+            "line_buffer": bytearray(),
+        }
+
+    def _serve_loop(self):
+        self.log.info("SMTP serve loop running...")
+
+        self.dispatcher.start()
+
+        sessions: Dict[Tuple[str, int], Dict] = {}
+
+        for packet in self.rdt_receiver.start_receiving():
+
+            if not self._running:
+                break
+
+            try:
+                data, addr = packet
+            except Exception:
+                self.log.error("Invalid packet received (missing sender address).")
+                continue
+
+            self.log.debug(f"Received {len(data)} bytes from {addr}")
+
+            if addr not in sessions:
+                sessions[addr] = self._create_session()
+                self._send_reply(addr, "220 Welcome Simple SMTP Server")
+                self.log.info(f"New SMTP session created for client {addr}")
+
+            session = sessions[addr]
+
+            if session["state"] == SMTPState.READING_DATA_STREAM:
+                self._handle_data_stream(addr, session, data)
+                continue
+
+            self._handle_command_stream(addr, session, data, sessions)
+
+        self._cleanup_senders()
+        self.log.info("SMTP serve loop fully terminated.")
+
+    def _handle_data_stream(self, addr, session, data):
+        session["data_buffer"].extend(data)
+        if SMTP_TERMINATOR not in session["data_buffer"]:
+            return
+
+        full = bytes(session["data_buffer"])
+        idx = full.find(SMTP_TERMINATOR)
+        msg_bytes = full[:idx]
+
+        session["data_buffer"] = bytearray()
+        session["line_buffer"] = bytearray()
+        session["state"] = SMTPState.WAIT_FOR_MAIL_FROM
+
+        self._finalize_message(addr, session, msg_bytes)
+
+    def _finalize_message(self, addr, session, msg_bytes):
+        try:
+            parser = BytesParser(policy=email_policy)
+            msg_obj = parser.parsebytes(msg_bytes)
+
+            uid = msg_obj.get("Message-ID")
+            if uid is None:
+                import uuid, time
+
+                uid = f"<{int(time.time())}-{uuid.uuid4().hex}>"
+
+            recipients = session.get("rcpt_to", [])
+            if not recipients:
+                self._send_reply(addr, "550 No recipients")
+                return
+
+            rcpt_addr = recipients[0]
+            username = rcpt_addr.split("@")[0]
+            user = User(username)
+
+            email_data = EmailData(
+                raw_message=msg_obj,
+                uid=uid,
+                subject=msg_obj.get("Subject", ""),
+                sender=msg_obj.get("From", ""),
+                recipient=rcpt_addr,
+                date=msg_obj.get("Date", ""),
+                body_html=None,
+                body_text=None,
+            )
+
+            saved_path = self.storage.save_email(user, email_data)
+            if saved_path:
+                self._send_reply(addr, "250 OK: Message accepted for delivery")
+                session["rcpt_to"] = []
+            else:
+                self._send_reply(addr, "451 Local processing error")
+
+        except Exception as e:
+            self.log.exception(f"Error finalizing email DATA block: {e}")
+            self._send_reply(addr, "451 Error processing message")
+
+    def _handle_command_stream(self, addr, session, data, sessions):
+        buf = session["line_buffer"]
+        buf.extend(data)
+
+        while True:
+            idx = buf.find(b"\r\n")
+            if idx == -1:
+                return
+
+            line = bytes(buf[:idx])
+            del buf[: idx + 2]
+
+            try:
+                cmd_str = line.decode("ascii", errors="ignore").strip()
+            except Exception:
+                cmd_str = ""
+
+            self.log.debug(f"[SMTP CMD from {addr}] {cmd_str!r}")
+
+            m = _re_cmd.match(cmd_str)
+            if not m:
+                self._send_reply(addr, "500 Syntax error")
+                continue
+
+            verb = m.group(1).upper()
+            arg = m.group(2) or ""
+
+            handler = getattr(self, f"_cmd_{verb}", None)
+            if handler:
+                handler(addr, session, arg, sessions)
+            else:
+                self._send_reply(addr, "500 Command unrecognized")
+
+    # --- SMTP Command Handlers ---
+    def _cmd_HELO(self, addr, session, arg, sessions):
+        session["state"] = SMTPState.WAIT_FOR_MAIL_FROM
+        self._send_reply(addr, "250 Hello")
+
+    _cmd_EHLO = _cmd_HELO
+
+    def _cmd_MAIL(self, addr, session, arg, sessions):
+        if session["state"] not in (
+            SMTPState.WAIT_FOR_MAIL_FROM,
+            SMTPState.WAIT_FOR_RCPT_TO,
+        ):
+            return self._send_reply(addr, "503 Bad sequence")
+        if arg.upper().startswith("FROM:"):
+            parsed = _parse_angle_addr(arg[5:].strip())
+            if parsed:
+                session["mail_from"] = parsed
+                session["state"] = SMTPState.WAIT_FOR_RCPT_TO
+                return self._send_reply(addr, "250 OK")
+        self._send_reply(addr, "500 Syntax error in MAIL FROM")
+
+    def _cmd_RCPT(self, addr, session, arg, sessions):
+        if session["state"] != SMTPState.WAIT_FOR_RCPT_TO:
+            return self._send_reply(addr, "503 Bad sequence")
+        if arg.upper().startswith("TO:"):
+            parsed = _parse_angle_addr(arg[3:].strip())
+            if parsed:
+                session["rcpt_to"].append(parsed)
+                session["state"] = SMTPState.WAIT_FOR_DATA_CMD
+                return self._send_reply(addr, "250 OK")
+        self._send_reply(addr, "500 Syntax error in RCPT TO")
+
+    def _cmd_DATA(self, addr, session, arg, sessions):
+        if session["state"] != SMTPState.WAIT_FOR_DATA_CMD or not session["rcpt_to"]:
+            return self._send_reply(addr, "503 Bad sequence")
+        session["state"] = SMTPState.READING_DATA_STREAM
+        session["data_buffer"] = bytearray()
+        session["line_buffer"] = bytearray()
+        self._send_reply(addr, "354 Start mail input; end with <CRLF>.<CRLF>")
+
+    def _cmd_RSET(self, addr, session, arg, sessions):
+        session.update(self._create_session())
+        self._send_reply(addr, "250 OK")
+
+    def _cmd_NOOP(self, addr, session, arg, sessions):
+        self._send_reply(addr, "250 OK")
+
+    def _cmd_QUIT(self, addr, session, arg, sessions):
+        self._send_reply(addr, "221 Bye")
+
+        # Cleanup Session
+        self._senders.pop(addr, None)
+        sessions.pop(addr, None)
+
+        # Reset RDT State for this client so they can reconnect later with SEQ 0
+        self.rdt_receiver.reset_state(addr)
+
+    def _cleanup_senders(self):
+        self._senders.clear()
+
+    def start(self):
+        if self._running:
+            return
+        self._running = True
+        self._thread = threading.Thread(
+            target=self._serve_loop, name="smtp-serve-loop", daemon=True
+        )
+        self._thread.start()
+        self.log.info("SMTP server started.")
+
+    def stop(self):
+        if not self._running:
+            return
+        self._running = False
+
+        try:
+            self.dispatcher.stop()
+        except Exception:
+            self.log.exception("Error stopping Dispatcher")
+
+        if self._thread:
+            self._thread.join(timeout=2.0)
+        self.log.info("SMTP server stopped.")
+
+--- END FILE: smtp_server.py ---

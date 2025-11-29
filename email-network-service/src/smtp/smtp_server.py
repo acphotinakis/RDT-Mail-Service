@@ -1,5 +1,3 @@
-# Path: src/smtp/smtp_server.py
-
 import re
 import threading
 from enum import Enum, auto
@@ -12,6 +10,7 @@ from email.policy import default as email_policy
 from src.common.logger import get_class_logger
 from src.rdt.rdt_receiver import RDTReceiver
 from src.rdt.rdt_sender import RDTSender
+from src.rdt.rdt_dispatcher import RDTDispatcher
 from src.mailbox.storage_manager import StorageManager
 from src.auth.user import User
 from src.client.frontend.models import EmailData
@@ -21,9 +20,6 @@ SMTP_TERMINATOR = b"\r\n.\r\n"
 _re_cmd = re.compile(r"^([A-Za-z]+)(?:\s+(.*))?$")
 
 
-# ------------------------------------------------------------
-# ENUM: SMTP STATE
-# ------------------------------------------------------------
 class SMTPState(Enum):
     WAIT_FOR_HELO = auto()
     WAIT_FOR_MAIL_FROM = auto()
@@ -33,26 +29,16 @@ class SMTPState(Enum):
 
 
 def _parse_angle_addr(arg: str) -> Optional[str]:
-    """Parse <user@domain> or raw user@domain."""
     if not arg:
         return None
-
     arg = arg.strip()
-
     if arg.startswith("<") and arg.endswith(">"):
         arg = arg[1:-1].strip()
-
     return arg if "@" in arg else None
 
 
-# ============================================================
-#                   SMTP SERVER (CLEAN VERSION)
-# ============================================================
 class SMTPServer:
 
-    # ------------------------------------------------------------
-    # INIT
-    # ------------------------------------------------------------
     def __init__(self, host: str, port: int):
         self.log = get_class_logger(self)
         self.log.info("Initializing SMTP server module...")
@@ -60,65 +46,40 @@ class SMTPServer:
         self.host = host
         self.port = port
 
-        # Create ONE socket for all RDT operations on server side
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.sock.bind((host, port))
 
-        # Receiver uses the same socket
-        self.rdt_receiver = RDTReceiver(sock=self.sock, yield_addr=True)
+        self.dispatcher = RDTDispatcher(self.sock)
+        self.rdt_receiver = RDTReceiver(dispatcher=self.dispatcher, yield_addr=True)
 
-        self._senders = {}
+        self._senders: Dict[Tuple[str, int], RDTSender] = {}
         self.storage = StorageManager()
         self._running = False
         self._thread = None
 
         self.log.info(f"SMTP server initialized on {self.host}:{self.port}")
 
-    # def __init__(self, host: str, port: int):
-    #     self.log = get_class_logger(self)
-    #     self.log.info("Initializing SMTP server module...")
-
-    #     self.host = host
-    #     self.port = port
-
-    #     self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    #     self.sock.bind((host, port))
-
-    #     # Pass the SAME socket into RDTReceiver
-    #     self.rdt_receiver = RDTReceiver(sock=self.sock, yield_addr=True)
-
-    #     self._senders: Dict[Tuple[str, int], RDTSender] = {}
-
-    #     self.storage = StorageManager()
-
-    #     self._running = False
-    #     self._thread: Optional[threading.Thread] = None
-
-    #     self.log.info(f"SMTP server initialized on {self.host}:{self.port}")
-
-    # ------------------------------------------------------------
-    # SENDER MANAGEMENT
-    # ------------------------------------------------------------
     def _get_sender(self, addr: Tuple[str, int]) -> RDTSender:
         if addr not in self._senders:
             host, port = addr
             self.log.debug(f"Allocating new RDTSender for {addr}")
-            self._senders[addr] = RDTSender(host, port, self.sock)
+            self._senders[addr] = RDTSender(host, port, self.dispatcher)
         return self._senders[addr]
 
     def _send_reply(self, addr: Tuple[str, int], msg: str):
         if not msg.endswith("\r\n"):
             msg += "\r\n"
 
-        sender = self._get_sender(addr)
-        sender.send(msg.encode("ascii"))
-        self.log.debug(f"[SMTP → {addr}] {msg.strip()}")
+        try:
+            sender = self._get_sender(addr)
+            sender.send(msg.encode("ascii"))
+            self.log.debug(f"[SMTP → {addr}] {msg.strip()}")
+        except ConnectionError:
+            self.log.error(f"Failed to send reply to {addr}. Client likely disconnected.")
+        except Exception as e:
+            self.log.exception(f"Unexpected error sending reply to {addr}: {e}")
 
-    # ------------------------------------------------------------
-    # SESSION MGMT
-    # ------------------------------------------------------------
     def _create_session(self) -> Dict[str, Any]:
-        """Return a fresh, empty SMTP session structure."""
         return {
             "state": SMTPState.WAIT_FOR_HELO,
             "mail_from": None,
@@ -127,11 +88,10 @@ class SMTPServer:
             "line_buffer": bytearray(),
         }
 
-    # ------------------------------------------------------------
-    # MAIN LOOP
-    # ------------------------------------------------------------
     def _serve_loop(self):
         self.log.info("SMTP serve loop running...")
+
+        self.dispatcher.start()
 
         sessions: Dict[Tuple[str, int], Dict] = {}
 
@@ -148,7 +108,6 @@ class SMTPServer:
 
             self.log.debug(f"Received {len(data)} bytes from {addr}")
 
-            # Ensure session exists
             if addr not in sessions:
                 sessions[addr] = self._create_session()
                 self._send_reply(addr, "220 Welcome Simple SMTP Server")
@@ -156,44 +115,30 @@ class SMTPServer:
 
             session = sessions[addr]
 
-            # State-machine routing
             if session["state"] == SMTPState.READING_DATA_STREAM:
                 self._handle_data_stream(addr, session, data)
                 continue
 
-            # Otherwise, handle commands
             self._handle_command_stream(addr, session, data, sessions)
 
         self._cleanup_senders()
         self.log.info("SMTP serve loop fully terminated.")
 
-    # ------------------------------------------------------------
-    # DATA MODE HANDLER (DATA … <CRLF>.<CRLF>)
-    # ------------------------------------------------------------
     def _handle_data_stream(self, addr, session, data):
         session["data_buffer"].extend(data)
-
         if SMTP_TERMINATOR not in session["data_buffer"]:
-            self.log.debug("DATA mode active — waiting for terminator.")
             return
 
-        # Extract raw message
         full = bytes(session["data_buffer"])
         idx = full.find(SMTP_TERMINATOR)
         msg_bytes = full[:idx]
 
-        self.log.debug(f"DATA terminator received at {addr}. Size={len(msg_bytes)}")
-
-        # Reset for new transactions
         session["data_buffer"] = bytearray()
         session["line_buffer"] = bytearray()
         session["state"] = SMTPState.WAIT_FOR_MAIL_FROM
 
         self._finalize_message(addr, session, msg_bytes)
 
-    # ------------------------------------------------------------
-    # FINALIZE AND SAVE EMAIL
-    # ------------------------------------------------------------
     def _finalize_message(self, addr, session, msg_bytes):
         try:
             parser = BytesParser(policy=email_policy)
@@ -208,7 +153,6 @@ class SMTPServer:
             recipients = session.get("rcpt_to", [])
             if not recipients:
                 self._send_reply(addr, "550 No recipients")
-                self.log.warning("DATA completed but session had no RCPT TO entries.")
                 return
 
             rcpt_addr = recipients[0]
@@ -229,19 +173,14 @@ class SMTPServer:
             saved_path = self.storage.save_email(user, email_data)
             if saved_path:
                 self._send_reply(addr, "250 OK: Message accepted for delivery")
-                self.log.info(f"Message stored for {rcpt_addr} at {saved_path}")
                 session["rcpt_to"] = []
             else:
                 self._send_reply(addr, "451 Local processing error")
-                self.log.error("StorageManager returned failure.")
 
         except Exception as e:
             self.log.exception(f"Error finalizing email DATA block: {e}")
             self._send_reply(addr, "451 Error processing message")
 
-    # ------------------------------------------------------------
-    # COMMAND PROCESSOR
-    # ------------------------------------------------------------
     def _handle_command_stream(self, addr, session, data, sessions):
         buf = session["line_buffer"]
         buf.extend(data)
@@ -249,7 +188,7 @@ class SMTPServer:
         while True:
             idx = buf.find(b"\r\n")
             if idx == -1:
-                return  # Wait for more bytes
+                return
 
             line = bytes(buf[:idx])
             del buf[: idx + 2]
@@ -273,13 +212,9 @@ class SMTPServer:
             if handler:
                 handler(addr, session, arg, sessions)
             else:
-                self.log.warning(f"Unknown SMTP verb: {verb}")
                 self._send_reply(addr, "500 Command unrecognized")
 
-    # ------------------------------------------------------------
-    # SMTP COMMAND HANDLERS
-    # ------------------------------------------------------------
-
+    # --- SMTP Command Handlers ---
     def _cmd_HELO(self, addr, session, arg, sessions):
         session["state"] = SMTPState.WAIT_FOR_MAIL_FROM
         self._send_reply(addr, "250 Hello")
@@ -292,7 +227,6 @@ class SMTPServer:
             SMTPState.WAIT_FOR_RCPT_TO,
         ):
             return self._send_reply(addr, "503 Bad sequence")
-
         if arg.upper().startswith("FROM:"):
             parsed = _parse_angle_addr(arg[5:].strip())
             if parsed:
@@ -304,24 +238,20 @@ class SMTPServer:
     def _cmd_RCPT(self, addr, session, arg, sessions):
         if session["state"] != SMTPState.WAIT_FOR_RCPT_TO:
             return self._send_reply(addr, "503 Bad sequence")
-
         if arg.upper().startswith("TO:"):
             parsed = _parse_angle_addr(arg[3:].strip())
             if parsed:
                 session["rcpt_to"].append(parsed)
                 session["state"] = SMTPState.WAIT_FOR_DATA_CMD
                 return self._send_reply(addr, "250 OK")
-
         self._send_reply(addr, "500 Syntax error in RCPT TO")
 
     def _cmd_DATA(self, addr, session, arg, sessions):
         if session["state"] != SMTPState.WAIT_FOR_DATA_CMD or not session["rcpt_to"]:
             return self._send_reply(addr, "503 Bad sequence")
-
         session["state"] = SMTPState.READING_DATA_STREAM
         session["data_buffer"] = bytearray()
         session["line_buffer"] = bytearray()
-
         self._send_reply(addr, "354 Start mail input; end with <CRLF>.<CRLF>")
 
     def _cmd_RSET(self, addr, session, arg, sessions):
@@ -333,52 +263,37 @@ class SMTPServer:
 
     def _cmd_QUIT(self, addr, session, arg, sessions):
         self._send_reply(addr, "221 Bye")
-        self.log.info(f"Client {addr} terminated session.")
 
-        try:
-            self._senders[addr].close()
-        except Exception:
-            pass
-
+        # Cleanup Session
         self._senders.pop(addr, None)
         sessions.pop(addr, None)
 
-    # ------------------------------------------------------------
-    # CLEANUP
-    # ------------------------------------------------------------
+        # Reset RDT State for this client so they can reconnect later with SEQ 0
+        self.rdt_receiver.reset_state(addr)
+
     def _cleanup_senders(self):
-        for sender in self._senders.values():
-            try:
-                sender.close()
-            except Exception:
-                self.log.exception("Error closing RDTSender")
         self._senders.clear()
 
-    # ------------------------------------------------------------
-    # PUBLIC START/STOP
-    # ------------------------------------------------------------
     def start(self):
         if self._running:
-            return self.log.warning("SMTP already running")
-
+            return
         self._running = True
         self._thread = threading.Thread(
             target=self._serve_loop, name="smtp-serve-loop", daemon=True
         )
         self._thread.start()
-        self.log.info("SMTP server started in background thread.")
+        self.log.info("SMTP server started.")
 
     def stop(self):
         if not self._running:
-            return self.log.warning("SMTP not running")
-
+            return
         self._running = False
+
         try:
-            self.rdt_receiver.stop()
+            self.dispatcher.stop()
         except Exception:
-            self.log.exception("Error stopping RDTReceiver")
+            self.log.exception("Error stopping Dispatcher")
 
         if self._thread:
             self._thread.join(timeout=2.0)
-
-        self.log.info("SMTP server fully stopped.")
+        self.log.info("SMTP server stopped.")

@@ -4,9 +4,11 @@ from typing import Optional, Tuple, Dict, Any, List
 from src.common.logger import get_class_logger
 from src.rdt.rdt_receiver import RDTReceiver
 from src.rdt.rdt_sender import RDTSender
+from src.rdt.rdt_dispatcher import RDTDispatcher
 from src.mailbox.storage_manager import StorageManager
 from src.auth.user_manager import UserManager
 from src.auth.user import User
+import socket
 
 
 class POP3Server:
@@ -15,19 +17,26 @@ class POP3Server:
         self.log.info("Initializing POP3 server module...")
         self.host = host
         self.port = port
-        self.rdt_receiver = RDTReceiver(host, port)
+
+        self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.sock.bind((host, port))
+
+        self.dispatcher = RDTDispatcher(self.sock)
+        self.rdt_receiver = RDTReceiver(dispatcher=self.dispatcher, yield_addr=True)
+
         self._senders: Dict[Tuple[str, int], RDTSender] = {}
         self.storage = StorageManager()
         self.user_manager = UserManager()
         self._running = False
         self._thread: Optional[threading.Thread] = None
+
         self.log.info(f"POP3 server initialized on {self.host}:{self.port}")
 
     def _get_sender(self, addr: Tuple[str, int]) -> RDTSender:
         if addr not in self._senders:
             host, port = addr
             self.log.debug(f"Allocating new RDTSender for {addr}")
-            self._senders[addr] = RDTSender(host, port)
+            self._senders[addr] = RDTSender(host, port, self.dispatcher)
         return self._senders[addr]
 
     def _send_reply(self, addr: Tuple[str, int], msg: str):
@@ -37,6 +46,8 @@ class POP3Server:
             sender = self._get_sender(addr)
             sender.send(msg.encode("ascii", errors="replace"))
             self.log.debug(f"[POP3 → {addr}] {msg.strip()}")
+        except ConnectionError:
+            self.log.error(f"Failed to reply to {addr}. Connection lost.")
         except Exception as e:
             self.log.exception(f"Error sending POP3 reply to {addr}: {e}")
 
@@ -49,6 +60,9 @@ class POP3Server:
 
     def _serve_loop(self):
         self.log.info("POP3 serve loop running...")
+
+        self.dispatcher.start()
+
         sessions: Dict[Tuple[str, int], Dict] = {}
 
         for packet in self.rdt_receiver.start_receiving():
@@ -58,7 +72,6 @@ class POP3Server:
             try:
                 data, addr = packet
             except Exception:
-                self.log.error("Invalid packet received (missing sender address).")
                 continue
 
             if addr not in sessions:
@@ -85,16 +98,13 @@ class POP3Server:
         if handler:
             handler(addr, session, args)
         else:
-            self.log.warning(f"Unknown POP3 command: {command}")
             self._send_reply(addr, "-ERR Unknown command")
 
     def _cmd_USER(self, addr, session, args):
         if session["state"] != "AUTHORIZATION":
-            self._send_reply(addr, "-ERR Command not allowed here")
-            return
+            return self._send_reply(addr, "-ERR Command not allowed here")
         if not args:
-            self._send_reply(addr, "-ERR Missing argument")
-            return
+            return self._send_reply(addr, "-ERR Missing argument")
 
         username = args[0]
         if self.user_manager.get_user(username):
@@ -105,36 +115,24 @@ class POP3Server:
 
     def _cmd_PASS(self, addr, session, args):
         if session["state"] != "AUTHORIZATION" or not session["user"]:
-            self._send_reply(addr, "-ERR Command not allowed here")
-            return
-        if not args:
-            self._send_reply(addr, "-ERR Missing argument")
-            return
-
-        # This is a simplified check. In a real scenario, you'd verify a password.
+            return self._send_reply(addr, "-ERR Command not allowed here")
         session["state"] = "TRANSACTION"
         self._send_reply(addr, "+OK Mailbox open")
 
     def _cmd_STAT(self, addr, session, args):
         if session["state"] != "TRANSACTION":
-            self._send_reply(addr, "-ERR Command not allowed here")
-            return
-
+            return self._send_reply(addr, "-ERR Command not allowed here")
         user = User(session["user"])
         messages = self.storage.list_messages(user)
-
         undeleted_messages = [
             msg for i, msg in enumerate(messages, 1) if i not in session["marked_for_deletion"]
         ]
-
         total_size = sum(msg[1] for msg in undeleted_messages)
         self._send_reply(addr, f"+OK {len(undeleted_messages)} {total_size}")
 
     def _cmd_LIST(self, addr, session, args):
         if session["state"] != "TRANSACTION":
-            self._send_reply(addr, "-ERR Command not allowed here")
-            return
-
+            return self._send_reply(addr, "-ERR Command not allowed here")
         user = User(session["user"])
         messages = self.storage.list_messages(user)
 
@@ -157,17 +155,14 @@ class POP3Server:
 
     def _cmd_RETR(self, addr, session, args):
         if session["state"] != "TRANSACTION":
-            self._send_reply(addr, "-ERR Command not allowed here")
-            return
+            return self._send_reply(addr, "-ERR Command not allowed here")
         if not args:
-            self._send_reply(addr, "-ERR Missing argument")
-            return
+            return self._send_reply(addr, "-ERR Missing argument")
 
         try:
             msg_num = int(args[0])
             user = User(session["user"])
             messages = self.storage.list_messages(user)
-
             if 1 <= msg_num <= len(messages) and msg_num not in session["marked_for_deletion"]:
                 filename = messages[msg_num - 1][0]
                 content = self.storage.get_message_content(user, filename)
@@ -184,17 +179,11 @@ class POP3Server:
 
     def _cmd_DELE(self, addr, session, args):
         if session["state"] != "TRANSACTION":
-            self._send_reply(addr, "-ERR Command not allowed here")
-            return
-        if not args:
-            self._send_reply(addr, "-ERR Missing argument")
-            return
-
+            return self._send_reply(addr, "-ERR Command not allowed here")
         try:
             msg_num = int(args[0])
             user = User(session["user"])
             messages = self.storage.list_messages(user)
-
             if 1 <= msg_num <= len(messages) and msg_num not in session["marked_for_deletion"]:
                 session["marked_for_deletion"].add(msg_num)
                 self._send_reply(addr, f"+OK Message {msg_num} deleted")
@@ -206,7 +195,6 @@ class POP3Server:
     def _cmd_QUIT(self, addr, session, args):
         user = User(session["user"])
         if session["state"] == "TRANSACTION":
-            # In UPDATE state, delete marked messages
             messages = self.storage.list_messages(user)
             marked_for_deletion = sorted(list(session["marked_for_deletion"]), reverse=True)
             for msg_num in marked_for_deletion:
@@ -215,25 +203,27 @@ class POP3Server:
 
         self._send_reply(addr, "+OK POP3 server signing off")
         self._senders.pop(addr, None)
+        # Reset RDT state for this client
+        self.rdt_receiver.reset_state(addr)
 
     def start(self):
         if self._running:
-            return self.log.warning("POP3 already running")
+            return
         self._running = True
         self._thread = threading.Thread(
             target=self._serve_loop, name="pop3-serve-loop", daemon=True
         )
         self._thread.start()
-        self.log.info("POP3 server started in background thread.")
+        self.log.info("POP3 server started.")
 
     def stop(self):
         if not self._running:
-            return self.log.warning("POP3 not running")
+            return
         self._running = False
         try:
-            self.rdt_receiver.stop()
+            self.dispatcher.stop()
         except Exception:
-            self.log.exception("Error stopping RDTReceiver")
+            self.log.exception("Error stopping Dispatcher")
         if self._thread:
             self._thread.join(timeout=2.0)
-        self.log.info("POP3 server fully stopped.")
+        self.log.info("POP3 server stopped.")
