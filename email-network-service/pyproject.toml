@@ -1,0 +1,57 @@
+[build-system]
+requires = ["setuptools>=67.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "email-network-service"
+version = "0.1.0"
+description = "SMTP, POP3, and custom RDT protocol implementation with client & server modules."
+authors = [
+    { name = "Andrew Photinakis", email = "your-email@rit.edu" }
+]
+readme = "README.md"
+requires-python = ">=3.10"
+
+# Runtime dependencies
+dependencies = [
+    "bcrypt>=4.1.1",
+    "rich>=13.7.0",
+    "psutil>=5.9.8",
+    "pytest>=7.4.2",
+]
+
+# Tell setuptools to search inside the `src/` directory
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["*"]  # include all nested packages
+
+# Include additional non-Python files such as mailbox templates or configs
+[tool.setuptools.package-data]
+"*" = ["*.json", "*.txt", "*.qss", "*.yaml", "*.png"]
+
+# Optional CLI entry points to run servers/clients directly from terminal
+[project.scripts]
+smtp-server = "smtp.smtp_server:main"
+smtp-client = "smtp.smtp_client:main"
+pop3-server = "pop3.pop3_server:main"
+pop3-client = "pop3.pop3_client:main"
+email-client = "client.user_agent:main"
+email-frontend = "client.run_frontend:main"
+
+# Pytest integration (you already have pytest.ini; this is complimentary)
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+addopts = "-q"
+
+# Formatting & linting tools
+[tool.black]
+line-length = 100
+
+[tool.isort]
+profile = "black"
+
+[tool.mypy]
+python_version = "3.10"
+ignore_missing_imports = true
+

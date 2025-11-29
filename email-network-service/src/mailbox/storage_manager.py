@@ -218,3 +218,44 @@ class StorageManager:
 
             finally:
                 self.log.debug(f"[UID] Lock released for '{username}'.")
+    
+    # ----------------------------------------------------------------------
+    # 5. DELETE MESSAGE (POP3 - DELE)
+    # ----------------------------------------------------------------------
+    def delete_email(self, user: User, filename: str) -> bool:
+        """
+        Marks an email for deletion.
+
+        Delegates to MailboxWriter.mark_message_as_deleted()
+        """
+        username = user.username.lower()
+        lock = self.get_lock(username)
+
+        self.log.debug(
+            f"[DELETE] Request to mark message '{filename}' as deleted for user '{username}'."
+        )
+
+        with lock:
+            self.log.debug(
+                f"[DELETE] Lock acquired for '{username}'. Marking message as deleted..."
+            )
+
+            try:
+                success = self.mailbox_writer.mark_message_as_deleted(user, filename)
+                if success:
+                    self.log.debug(f"[DELETE] Successfully marked '{filename}' as deleted.")
+                else:
+                    self.log.warning(
+                        f"[DELETE] Failed to mark '{filename}' as deleted."
+                    )
+                return success
+
+            except Exception as e:
+                self.log.error(
+                    f"[DELETE] Error while marking message '{filename}' as deleted for '{username}': {e}",
+                    exc_info=True,
+                )
+                return False
+
+            finally:
+                self.log.debug(f"[DELETE] Lock released for '{username}'.")

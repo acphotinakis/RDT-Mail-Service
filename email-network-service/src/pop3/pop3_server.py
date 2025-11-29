@@ -121,11 +121,12 @@ class POP3Server:
             return
         
         user = User(session["user"])
-        emails = self.storage.get_user_emails(user)
-        undeleted_emails = [em for i, em in enumerate(emails, 1) if i not in session["marked_for_deletion"]]
+        messages = self.storage.list_messages(user)
         
-        total_size = sum(len(em.raw_message.as_bytes()) for em in undeleted_emails)
-        self._send_reply(addr, f"+OK {len(undeleted_emails)} {total_size}")
+        undeleted_messages = [msg for i, msg in enumerate(messages, 1) if i not in session["marked_for_deletion"]]
+        
+        total_size = sum(msg[1] for msg in undeleted_messages)
+        self._send_reply(addr, f"+OK {len(undeleted_messages)} {total_size}")
 
     def _cmd_LIST(self, addr, session, args):
         if session["state"] != "TRANSACTION":
@@ -133,20 +134,19 @@ class POP3Server:
             return
 
         user = User(session["user"])
-        emails = self.storage.get_user_emails(user)
+        messages = self.storage.list_messages(user)
         
         if not args:
-            self._send_reply(addr, f"+OK {len(emails)} messages")
-            for i, email in enumerate(emails, 1):
+            self._send_reply(addr, f"+OK {len(messages)} messages")
+            for i, msg in enumerate(messages, 1):
                 if i not in session["marked_for_deletion"]:
-                    size = len(email.raw_message.as_bytes())
-                    self._send_reply(addr, f"{i} {size}")
+                    self._send_reply(addr, f"{i} {msg[1]}")
             self._send_reply(addr, ".")
         else:
             try:
                 msg_num = int(args[0])
-                if 1 <= msg_num <= len(emails) and msg_num not in session["marked_for_deletion"]:
-                    size = len(emails[msg_num - 1].raw_message.as_bytes())
+                if 1 <= msg_num <= len(messages) and msg_num not in session["marked_for_deletion"]:
+                    size = messages[msg_num - 1][1]
                     self._send_reply(addr, f"+OK {msg_num} {size}")
                 else:
                     self._send_reply(addr, f"-ERR No such message")
@@ -164,14 +164,17 @@ class POP3Server:
         try:
             msg_num = int(args[0])
             user = User(session["user"])
-            emails = self.storage.get_user_emails(user)
+            messages = self.storage.list_messages(user)
 
-            if 1 <= msg_num <= len(emails) and msg_num not in session["marked_for_deletion"]:
-                email = emails[msg_num - 1]
-                email_bytes = email.raw_message.as_bytes()
-                self._send_reply(addr, f"+OK {len(email_bytes)} octets")
-                self._get_sender(addr).send(email_bytes)
-                self._send_reply(addr, ".")
+            if 1 <= msg_num <= len(messages) and msg_num not in session["marked_for_deletion"]:
+                filename = messages[msg_num - 1][0]
+                content = self.storage.get_message_content(user, filename)
+                if content:
+                    self._send_reply(addr, f"+OK {len(content)} octets")
+                    self._get_sender(addr).send(content.encode("ascii"))
+                    self._send_reply(addr, ".")
+                else:
+                    self._send_reply(addr, f"-ERR could not retrieve message")
             else:
                 self._send_reply(addr, f"-ERR No such message")
         except (ValueError, IndexError):
@@ -188,9 +191,9 @@ class POP3Server:
         try:
             msg_num = int(args[0])
             user = User(session["user"])
-            emails = self.storage.get_user_emails(user)
+            messages = self.storage.list_messages(user)
 
-            if 1 <= msg_num <= len(emails) and msg_num not in session["marked_for_deletion"]:
+            if 1 <= msg_num <= len(messages) and msg_num not in session["marked_for_deletion"]:
                 session["marked_for_deletion"].add(msg_num)
                 self._send_reply(addr, f"+OK Message {msg_num} deleted")
             else:
@@ -202,9 +205,11 @@ class POP3Server:
         user = User(session["user"])
         if session["state"] == "TRANSACTION":
             # In UPDATE state, delete marked messages
+            messages = self.storage.list_messages(user)
             marked_for_deletion = sorted(list(session["marked_for_deletion"]), reverse=True)
             for msg_num in marked_for_deletion:
-                self.storage.delete_email(user, msg_num - 1)
+                filename = messages[msg_num-1][0]
+                self.storage.delete_email(user, filename)
         
         self._send_reply(addr, "+OK POP3 server signing off")
         self._senders.pop(addr, None)

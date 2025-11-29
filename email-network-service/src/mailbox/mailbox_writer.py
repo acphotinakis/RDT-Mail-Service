@@ -184,3 +184,28 @@ class MailboxWriter:
         self.log.info(f"--- END EMAIL WRITE TRANSACTION for user '{user.username}' ---")
 
         return final_path
+
+    def mark_message_as_deleted(self, user: User, filename: str) -> bool:
+        """
+        Marks a message as deleted in the metadata.
+        """
+        self.log.info(
+            f"--- BEGIN EMAIL DELETE TRANSACTION for user '{user.username}' ---"
+        )
+        metadata_path = os.path.join(MAILBOXES_DIR, user.username, "metadata.json")
+        metadata = self._load_metadata(metadata_path)
+
+        if filename in metadata["messages"]:
+            metadata["messages"][filename]["deleted"] = True
+            self._save_metadata(metadata_path, metadata)
+            self.log.info(f"Marked message '{filename}' as deleted.")
+            self.log.info(
+                f"--- END EMAIL DELETE TRANSACTION for user '{user.username}' ---"
+            )
+            return True
+        else:
+            self.log.warning(f"Message '{filename}' not found in metadata.")
+            self.log.info(
+                f"--- END EMAIL DELETE TRANSACTION for user '{user.username}' ---"
+            )
+            return False
