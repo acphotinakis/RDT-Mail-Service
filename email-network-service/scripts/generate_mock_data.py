@@ -1,15 +1,14 @@
 """
 Utility script to populate the local database with mock users and emails.
 
-Creates 50 users with Faker-generated usernames + passwords.
-Each user gets 10 emails with Faker-generated realistic content.
-Also regenerates database/users.json from scratch.
+Creates 50 users, then generates emails between random users.
 """
 
 import os
 import uuid
 import shutil
 import json
+import random
 from datetime import timezone
 from email.message import EmailMessage
 from email.utils import format_datetime
@@ -24,7 +23,7 @@ from src.common.config import MAILBOXES_DIR, TEMP_EMAILS_DIR, USER_DB_FILE
 
 fake = Faker()
 TOTAL_USERS = 50
-EMAILS_PER_USER = 10
+EMAILS_PER_USER = 10  # each user "sends" 10 messages, but delivered to random others
 
 
 # -----------------------------------------------------------------------------#
@@ -50,31 +49,27 @@ def ensure_users_json():
 # -----------------------------------------------------------------------------#
 # Faker Generators
 # -----------------------------------------------------------------------------#
-
-
 def generate_username() -> str:
-    """Generate a filesystem-safe unique username."""
     return fake.user_name().replace(".", "").replace("_", "").lower()
 
 
 def generate_password() -> str:
-    """Generate a Faker password (10 char alphanumeric)."""
     return fake.password(length=10, special_chars=False)
 
 
-def build_email(username: str) -> EmailData:
-    """Build a realistic mock email using Faker."""
+def build_email(sender_user: User, recipient_user: User) -> EmailData:
     date = fake.date_time_between(start_date="-1y", end_date="now", tzinfo=timezone.utc)
 
     subject = fake.sentence(nb_words=6)
-    sender = fake.email()
-    recipient = f"{username}@example.com"
     body = fake.paragraph(nb_sentences=3)
+
+    sender_addr = f"{sender_user.username}@example.com"
+    recipient_addr = f"{recipient_user.username}@example.com"
 
     msg = EmailMessage()
     msg["Subject"] = subject
-    msg["From"] = sender
-    msg["To"] = recipient
+    msg["From"] = sender_addr
+    msg["To"] = recipient_addr
     msg["Date"] = format_datetime(date)
     msg.set_content(body)
 
@@ -82,8 +77,8 @@ def build_email(username: str) -> EmailData:
         raw_message=msg,
         uid=str(uuid.uuid4()),
         subject=subject,
-        sender=sender,
-        recipient=recipient,
+        sender=sender_addr,
+        recipient=recipient_addr,
         date=msg["Date"],
         body_text=body,
         body_html=None,
@@ -93,8 +88,6 @@ def build_email(username: str) -> EmailData:
 # -----------------------------------------------------------------------------#
 # Main Generator
 # -----------------------------------------------------------------------------#
-
-
 def main():
     ensure_directories()
     ensure_users_json()
@@ -105,10 +98,14 @@ def main():
     created_users = 0
     created_messages = 0
     used_usernames = set()
+
+    all_users: list[User] = []
     user_passwords = []
 
+    # -----------------------------------------------------
+    # 1. Create all users FIRST
+    # -----------------------------------------------------
     for _ in range(TOTAL_USERS):
-        # Generate unique username
         username = generate_username()
         while username in used_usernames:
             username = generate_username()
@@ -116,20 +113,26 @@ def main():
 
         password = generate_password()
 
-        # Create user in the DB
-        try:
-            user = user_manager.create_user(username, password)
-            created_users += 1
-        except ValueError:
-            # Already exists? Fetch
-            user = user_manager.get_user(username) or User(username, password)
+        user = user_manager.create_user(username, password)
+        all_users.append(user)
+        user_passwords.append((username, password))
+        created_users += 1
 
-        user_passwords.append((username, user.password))
-
-        # Create mailbox emails
+    # -----------------------------------------------------
+    # 2. Generate random emails BETWEEN users
+    # -----------------------------------------------------
+    for sender in all_users:
         for _ in range(EMAILS_PER_USER):
-            email_data = build_email(username)
-            if writer.write_email(user, email_data):
+            recipient = random.choice(all_users)
+
+            # never send to yourself
+            while recipient.username == sender.username:
+                recipient = random.choice(all_users)
+
+            email_data = build_email(sender, recipient)
+
+            # deliver to recipient mailbox
+            if writer.write_email(recipient, email_data):
                 created_messages += 1
 
     # -------------------------------------------------------------------------
