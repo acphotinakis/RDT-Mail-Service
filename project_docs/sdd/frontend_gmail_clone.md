@@ -394,8 +394,8 @@ if __name__ == "__main__":
 ### `main_window.py`
 ```python
 from PySide6.QtWidgets import QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QListView, QStatusBar
-from .views import MessageView
-from .controllers import AppController
+from views import MessageView
+from controllers import AppController
 
 class MainWindow(QMainWindow):
     def __init__(self):

@@ -8,7 +8,7 @@ sys.path.insert(0, project_root)
 print("project_root " + project_root)
 
 from PySide6.QtWidgets import QApplication
-from src.client.frontend.main_window import MainWindow
+from client.frontend.main_window import MainWindow
 
 
 def run_client_frontend():
@@ -16,9 +16,7 @@ def run_client_frontend():
 
     # Load QSS theme
     try:
-        with open(
-            "email-network-service/src/client/frontend/assets/theme.qss", "r"
-        ) as f:
+        with open("email-network-service/src/client/frontend/assets/theme.qss", "r") as f:
             app.setStyleSheet(f.read())
     except FileNotFoundError:
         print("Stylesheet not found. Please check the path.")

@@ -1,8 +1,8 @@
 # import threading
 # import time
 
-# from src.rdt.rdt_receiver import RDTReceiver
-# from src.rdt.rdt_sender import RDTSender
+# from rdt.rdt_receiver import RDTReceiver
+# from rdt.rdt_sender import RDTSender
 
 # MAX_CLIENTS = 8
 # STARTING_PORT = 47129

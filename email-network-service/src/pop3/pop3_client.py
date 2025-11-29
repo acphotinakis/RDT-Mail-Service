@@ -1,15 +1,18 @@
 from typing import List, Tuple
-from src.common.logger import get_class_logger
-from src.common.config import POP3_SERVER_HOST, POP3_SERVER_PORT, CLIENT_IP, CLIENT_LISTENING_PORT
-from src.common.exceptions import POP3ConnectionError, POP3ProtocolError
-from src.rdt.rdt_sender import RDTSender
-from src.rdt.rdt_receiver import RDTReceiver
+from common.logger import get_class_logger
+from common.config import POP3_SERVER_HOST, POP3_SERVER_PORT, CLIENT_IP, CLIENT_LISTENING_PORT
+from common.exceptions import POP3ConnectionError, POP3ProtocolError
+from rdt.rdt_sender import RDTSender
+from rdt.rdt_receiver import RDTReceiver
+
 
 class POP3Client:
     def __init__(self):
         self.log = get_class_logger(self)
         self.rdt_sender = RDTSender(POP3_SERVER_HOST, POP3_SERVER_PORT)
-        self.rdt_receiver = RDTReceiver(CLIENT_IP, CLIENT_LISTENING_PORT + 1) # Use a different port than SMTP
+        self.rdt_receiver = RDTReceiver(
+            CLIENT_IP, CLIENT_LISTENING_PORT + 1
+        )  # Use a different port than SMTP
         self.receiver_gen = None
         self.is_connected = False
 
@@ -51,7 +54,7 @@ class POP3Client:
         reply = self._get_reply()
         if not reply.startswith("+OK"):
             raise POP3ProtocolError(f"LIST command failed: {reply}")
-        
+
         messages = []
         while True:
             line = self._get_reply()
@@ -109,22 +112,22 @@ class POP3Client:
             self.rdt_sender.close()
         self.is_connected = False
 
-    def fetch_new_emails(self, user, password) -> list[str]:
+    def fetch_new_emails(self, user, password) -> List[str]:
         self.connect()
         self.authenticate(user, password)
-        
+
         _, total_size = self.stat()
         if total_size == 0:
             self.quit()
             return []
 
         messages_info = self.list()
-        
+
         emails = []
         for msg_num, _ in messages_info:
             email_content = self.retr(msg_num)
             emails.append(email_content)
             self.dele(msg_num)
-            
+
         self.quit()
         return emails

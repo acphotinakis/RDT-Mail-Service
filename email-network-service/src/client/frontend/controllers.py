@@ -1,9 +1,9 @@
 from PySide6.QtCore import QObject, Slot, QModelIndex, Qt, QThread, Signal
 from PySide6.QtWidgets import QDialog
 
-from src.client.frontend.wrappers import StorageWrapper, SMTPWrapper, POP3Wrapper
-from src.client.frontend.models import EmailListModel, EmailData
-from src.client.frontend.views import ComposeWindow, SettingsDialog
+from client.frontend.wrappers import StorageWrapper, SMTPWrapper, POP3Wrapper
+from client.frontend.models import EmailListModel, EmailData
+from client.frontend.views import ComposeWindow, SettingsDialog
 from typing import Optional, cast
 
 
@@ -57,15 +57,15 @@ class AppController(QObject):
         indexes = self.main_window.email_list_view.selectedIndexes()
         if not indexes:
             return None
-        return cast(Optional[EmailData], self.email_model.data(indexes[0], Qt.ItemDataRole.UserRole))
+        return cast(
+            Optional[EmailData], self.email_model.data(indexes[0], Qt.ItemDataRole.UserRole)
+        )
 
     def load_user_emails(self, user: str):
         """Loads emails for a user and updates the model."""
         emails = self.storage.list_emails(user)
         self.email_model.update_emails(emails)
-        self.main_window.statusBar().showMessage(
-            f"{len(emails)} emails loaded for {user}."
-        )
+        self.main_window.statusBar().showMessage(f"{len(emails)} emails loaded for {user}.")
 
     @Slot(QModelIndex)
     def on_email_selected(self, index: QModelIndex):
@@ -73,13 +73,13 @@ class AppController(QObject):
         if not index.isValid():
             return
 
-        email_data = cast(Optional[EmailData], self.email_model.data(index, Qt.ItemDataRole.UserRole))
+        email_data = cast(
+            Optional[EmailData], self.email_model.data(index, Qt.ItemDataRole.UserRole)
+        )
         if email_data:
             html_content = email_data.body_html or f"<pre>{email_data.body_text}</pre>"
             self.main_window.message_view.setHtml(html_content)
-            self.main_window.statusBar().showMessage(
-                f"Viewing email: {email_data.subject}"
-            )
+            self.main_window.statusBar().showMessage(f"Viewing email: {email_data.subject}")
 
     @Slot()
     def on_compose_button_clicked(self, initial_data: Optional[dict] = None):
@@ -93,9 +93,7 @@ class AppController(QObject):
         """Handles the reply action."""
         email = self._get_current_selected_email()
         if not email:
-            self.main_window.statusBar().showMessage(
-                "Please select an email to reply to.", 3000
-            )
+            self.main_window.statusBar().showMessage("Please select an email to reply to.", 3000)
             return
 
         subject = f"Re: {email.subject}"
@@ -114,22 +112,16 @@ class AppController(QObject):
         """Handles the reply-all action (placeholder)."""
         email = self._get_current_selected_email()
         if not email:
-            self.main_window.statusBar().showMessage(
-                "Please select an email to reply to.", 3000
-            )
+            self.main_window.statusBar().showMessage("Please select an email to reply to.", 3000)
             return
-        self.main_window.statusBar().showMessage(
-            "Reply All is not implemented yet.", 3000
-        )
+        self.main_window.statusBar().showMessage("Reply All is not implemented yet.", 3000)
 
     @Slot()
     def on_delete_clicked(self):
         """Moves the selected email to the trash."""
         email = self._get_current_selected_email()
         if not email:
-            self.main_window.statusBar().showMessage(
-                "Please select an email to delete.", 3000
-            )
+            self.main_window.statusBar().showMessage("Please select an email to delete.", 3000)
             return
 
         was_deleted = self.storage.delete_email(self.user, email.uid)
@@ -195,9 +187,7 @@ class AppController(QObject):
         for email_content in new_emails:
             self.storage.save_email(self.user, email_content)
 
-        self.main_window.statusBar().showMessage(
-            f"Fetched {len(new_emails)} new email(s).", 5000
-        )
+        self.main_window.statusBar().showMessage(f"Fetched {len(new_emails)} new email(s).", 5000)
         self.load_user_emails(self.user)
 
     @Slot()

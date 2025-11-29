@@ -1,13 +1,13 @@
 # Path: src/mailbox/mailbox_writer.py
 
-from src.auth.user import User
-from src.client.frontend.models import EmailData
-from src.common.config import MAILBOXES_DIR, TEMP_EMAILS_DIR
+from auth.user import User
+from client.frontend.models import EmailData
+from common.config import MAILBOXES_DIR, TEMP_EMAILS_DIR
 import os
 import uuid
 import time
 import json
-from src.common.logger import get_class_logger
+from common.logger import get_class_logger
 from typing import Optional
 
 
@@ -33,14 +33,11 @@ class MailboxWriter:
             with open(metadata_path, "r") as f:
                 data = json.load(f)
                 total = len(data.get("messages", {}))
-                self.log.debug(
-                    f"Loaded existing metadata.json with {total} message entries."
-                )
+                self.log.debug(f"Loaded existing metadata.json with {total} message entries.")
                 return data
         except Exception as e:
             self.log.error(
-                f"Failed to load metadata.json due to: {e}. "
-                f"Reinitializing metadata structure."
+                f"Failed to load metadata.json due to: {e}. " f"Reinitializing metadata structure."
             )
             return {"messages": {}}
 
@@ -72,9 +69,7 @@ class MailboxWriter:
     # ------------------------------
 
     def write_email(self, user: User, email_data: EmailData) -> Optional[str]:
-        self.log.info(
-            f"--- BEGIN EMAIL WRITE TRANSACTION for user '{user.username}' ---"
-        )
+        self.log.info(f"--- BEGIN EMAIL WRITE TRANSACTION for user '{user.username}' ---")
 
         # Establish user mailbox directories
         user_dir = os.path.join(MAILBOXES_DIR, user.username)
@@ -107,13 +102,11 @@ class MailboxWriter:
         try:
             raw_email = email_data.raw_message.as_string()
             self.log.debug(
-                f"Converted EmailData.raw_message into MIME text "
-                f"({len(raw_email)} bytes)"
+                f"Converted EmailData.raw_message into MIME text " f"({len(raw_email)} bytes)"
             )
         except Exception as e:
             self.log.error(
-                f"Failed converting raw_message to string: {e}. "
-                "Email will NOT be written."
+                f"Failed converting raw_message to string: {e}. " "Email will NOT be written."
             )
             return None
 
@@ -125,9 +118,7 @@ class MailboxWriter:
             with open(temp_path, "w", encoding="utf-8") as f:
                 f.write(raw_email)
         except Exception as e:
-            self.log.error(
-                f"Failed to write temp email file '{temp_path}'. Reason: {e}"
-            )
+            self.log.error(f"Failed to write temp email file '{temp_path}'. Reason: {e}")
             return None
 
         self.log.debug("TEMP email file write successful.")
@@ -189,9 +180,7 @@ class MailboxWriter:
         """
         Marks a message as deleted in the metadata.
         """
-        self.log.info(
-            f"--- BEGIN EMAIL DELETE TRANSACTION for user '{user.username}' ---"
-        )
+        self.log.info(f"--- BEGIN EMAIL DELETE TRANSACTION for user '{user.username}' ---")
         metadata_path = os.path.join(MAILBOXES_DIR, user.username, "metadata.json")
         metadata = self._load_metadata(metadata_path)
 
@@ -199,13 +188,9 @@ class MailboxWriter:
             metadata["messages"][filename]["deleted"] = True
             self._save_metadata(metadata_path, metadata)
             self.log.info(f"Marked message '{filename}' as deleted.")
-            self.log.info(
-                f"--- END EMAIL DELETE TRANSACTION for user '{user.username}' ---"
-            )
+            self.log.info(f"--- END EMAIL DELETE TRANSACTION for user '{user.username}' ---")
             return True
         else:
             self.log.warning(f"Message '{filename}' not found in metadata.")
-            self.log.info(
-                f"--- END EMAIL DELETE TRANSACTION for user '{user.username}' ---"
-            )
+            self.log.info(f"--- END EMAIL DELETE TRANSACTION for user '{user.username}' ---")
             return False

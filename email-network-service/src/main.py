@@ -3,23 +3,22 @@ import sys
 import threading
 import time
 
-from src.common.config import (
+from common.config import (
     SMTP_SERVER_HOST,
     SMTP_SERVER_PORT,
     POP3_SERVER_HOST,
     POP3_SERVER_PORT,
 )
-from src.smtp.smtp_server import SMTPServer
-from src.pop3.pop3_server import POP3Server
-from src.client.run_frontend import run_client_frontend
+from smtp.smtp_server import SMTPServer
+from pop3.pop3_server import POP3Server
+from client.run_frontend import run_client_frontend
+
 
 def main():
     """
     Main entry point for the email network service application.
     """
-    parser = argparse.ArgumentParser(
-        description="Run the SMTP/POP3 server or the email client."
-    )
+    parser = argparse.ArgumentParser(description="Run the SMTP/POP3 server or the email client.")
     parser.add_argument(
         "action",
         choices=["server", "client"],
@@ -44,12 +43,8 @@ def run_server():
     pop3_server = POP3Server(POP3_SERVER_HOST, POP3_SERVER_PORT)
 
     # Start servers in separate threads
-    smtp_thread = threading.Thread(
-        target=smtp_server.start, name="smtp-server", daemon=True
-    )
-    pop3_thread = threading.Thread(
-        target=pop3_server.start, name="pop3-server", daemon=True
-    )
+    smtp_thread = threading.Thread(target=smtp_server.start, name="smtp-server", daemon=True)
+    pop3_thread = threading.Thread(target=pop3_server.start, name="pop3-server", daemon=True)
 
     smtp_thread.start()
     pop3_thread.start()

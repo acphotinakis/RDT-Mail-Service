@@ -1,8 +1,17 @@
-from PySide6.QtWidgets import QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QListView, QStatusBar
+from PySide6.QtWidgets import (
+    QMainWindow,
+    QWidget,
+    QVBoxLayout,
+    QHBoxLayout,
+    QPushButton,
+    QListView,
+    QStatusBar,
+)
 from PySide6.QtGui import QKeySequence, QShortcut
 
-from src.client.frontend.views import MessageView
-from src.client.frontend.controllers import AppController
+from client.frontend.views import MessageView
+from client.frontend.controllers import AppController
+
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -18,7 +27,7 @@ class MainWindow(QMainWindow):
         # Left panel (sidebar and email list)
         left_panel = QWidget()
         left_layout = QVBoxLayout(left_panel)
-        
+
         button_bar = QHBoxLayout()
         self.compose_button = QPushButton("COMPOSE")
         self.reply_button = QPushButton("Reply")
@@ -28,7 +37,7 @@ class MainWindow(QMainWindow):
         button_bar.addWidget(self.reply_button)
         button_bar.addWidget(self.reply_all_button)
         button_bar.addWidget(self.delete_button)
-        
+
         self.email_list_view = QListView()
         left_layout.addLayout(button_bar)
         left_layout.addWidget(self.email_list_view)
@@ -42,7 +51,7 @@ class MainWindow(QMainWindow):
         # Status bar
         self.status_bar = QStatusBar(self)
         self.setStatusBar(self.status_bar)
-        
+
         self.settings_button = QPushButton("Settings")
         self.refresh_button = QPushButton("Refresh")
         self.status_bar.addPermanentWidget(self.settings_button)
@@ -63,7 +72,7 @@ class MainWindow(QMainWindow):
         # Refresh Inbox: F5
         refresh_shortcut = QShortcut(QKeySequence("F5"), self)
         refresh_shortcut.activated.connect(self.controller.on_refresh_clicked)
-        
+
         # Reply: Ctrl+R
         reply_shortcut = QShortcut(QKeySequence("Ctrl+R"), self)
         reply_shortcut.activated.connect(self.controller.on_reply_clicked)

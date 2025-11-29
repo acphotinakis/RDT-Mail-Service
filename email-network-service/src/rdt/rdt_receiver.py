@@ -1,8 +1,8 @@
 # Path: src/rdt/rdt_receiver.py
 import socket
-from src.common.logger import get_class_logger
-from src.rdt.rdt_config import RDT_RECV_BUFSIZE
-from .rdt_packet import make_ack_packet, unpack_and_validate
+from common.logger import get_class_logger
+from rdt.rdt_config import RDT_RECV_BUFSIZE
+from rdt.rdt_packet import make_ack_packet, unpack_and_validate
 
 
 class RDTReceiver:
@@ -27,9 +27,7 @@ class RDTReceiver:
         Generator that continuously listens for packets.
         Yields valid, in-order data chunks to the application layer.
         """
-        self.log.info(
-            f"Receiver: Waiting for packet SEQ {self.expected_seq} from below."
-        )
+        self.log.info(f"Receiver: Waiting for packet SEQ {self.expected_seq} from below.")
 
         while self.running:
             try:
@@ -39,11 +37,7 @@ class RDTReceiver:
                 rcvpkt = unpack_and_validate(rcv_bytes)
 
                 # Event: corrupt(rcvpkt) OR has_seq(rcvpkt, wrong_seq)
-                if (
-                    rcvpkt is None
-                    or not rcvpkt["is_ack"]
-                    and rcvpkt["seq"] != self.expected_seq
-                ):
+                if rcvpkt is None or not rcvpkt["is_ack"] and rcvpkt["seq"] != self.expected_seq:
                     # Action: sndpkt = make_pkt(ACK, last_correct_seq, checksum); udt_send(sndpkt)
                     # The last correct seq is 1 minus current expected (toggling 0/1)
                     last_correct_seq = 1 - self.expected_seq

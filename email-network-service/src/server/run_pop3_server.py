@@ -1,7 +1,8 @@
 import sys
 import time
-from src.common.config import POP3_SERVER_HOST, POP3_SERVER_PORT
-from src.pop3.pop3_server import POP3Server
+from common.config import POP3_SERVER_HOST, POP3_SERVER_PORT
+from pop3.pop3_server import POP3Server
+
 
 def main():
     """
@@ -20,6 +21,7 @@ def main():
         server.stop()
         print("POP3 server stopped.")
         sys.exit(0)
+
 
 if __name__ == "__main__":
     main()

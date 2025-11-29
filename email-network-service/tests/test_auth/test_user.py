@@ -1,5 +1,5 @@
 import pytest
-from src.auth.user import User
+from auth.user import User
 
 
 def test_user_creation():

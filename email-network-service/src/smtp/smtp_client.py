@@ -1,15 +1,15 @@
 import time
 from typing import Optional
-from src.common.logger import get_class_logger
-from src.common.config import (
+from common.logger import get_class_logger
+from common.config import (
     SMTP_SERVER_HOST,
     SMTP_SERVER_PORT,
     CLIENT_IP,
     CLIENT_LISTENING_PORT,
 )
-from src.common.exceptions import SMTPProtocolError, SMTPConnectionError
-from src.rdt.rdt_sender import RDTSender
-from src.rdt.rdt_receiver import RDTReceiver
+from common.exceptions import SMTPProtocolError, SMTPConnectionError
+from rdt.rdt_sender import RDTSender
+from rdt.rdt_receiver import RDTReceiver
 
 
 # SMTP Response Codes

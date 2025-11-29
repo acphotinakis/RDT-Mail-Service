@@ -1,12 +1,12 @@
 import threading
 from typing import Optional, Tuple, Dict, Any, List
 
-from src.common.logger import get_class_logger
-from src.rdt.rdt_receiver import RDTReceiver
-from src.rdt.rdt_sender import RDTSender
-from src.mailbox.storage_manager import StorageManager
-from src.auth.user_manager import UserManager
-from src.auth.user import User
+from common.logger import get_class_logger
+from rdt.rdt_receiver import RDTReceiver
+from rdt.rdt_sender import RDTSender
+from mailbox.storage_manager import StorageManager
+from auth.user_manager import UserManager
+from auth.user import User
 
 
 class POP3Server:
@@ -73,7 +73,7 @@ class POP3Server:
                     continue
                 self.log.debug(f"[POP3 CMD from {addr}] {line!r}")
                 self._handle_command(addr, session, line, sessions)
-    
+
     def _handle_command(self, addr, session, line, sessions):
         parts = line.strip().split()
         if not parts:
@@ -95,7 +95,7 @@ class POP3Server:
         if not args:
             self._send_reply(addr, "-ERR Missing argument")
             return
-        
+
         username = args[0]
         if self.user_manager.get_user(username):
             session["user"] = username
@@ -110,7 +110,7 @@ class POP3Server:
         if not args:
             self._send_reply(addr, "-ERR Missing argument")
             return
-        
+
         # This is a simplified check. In a real scenario, you'd verify a password.
         session["state"] = "TRANSACTION"
         self._send_reply(addr, "+OK Mailbox open")
@@ -119,12 +119,14 @@ class POP3Server:
         if session["state"] != "TRANSACTION":
             self._send_reply(addr, "-ERR Command not allowed here")
             return
-        
+
         user = User(session["user"])
         messages = self.storage.list_messages(user)
-        
-        undeleted_messages = [msg for i, msg in enumerate(messages, 1) if i not in session["marked_for_deletion"]]
-        
+
+        undeleted_messages = [
+            msg for i, msg in enumerate(messages, 1) if i not in session["marked_for_deletion"]
+        ]
+
         total_size = sum(msg[1] for msg in undeleted_messages)
         self._send_reply(addr, f"+OK {len(undeleted_messages)} {total_size}")
 
@@ -135,7 +137,7 @@ class POP3Server:
 
         user = User(session["user"])
         messages = self.storage.list_messages(user)
-        
+
         if not args:
             self._send_reply(addr, f"+OK {len(messages)} messages")
             for i, msg in enumerate(messages, 1):
@@ -160,7 +162,7 @@ class POP3Server:
         if not args:
             self._send_reply(addr, "-ERR Missing argument")
             return
-            
+
         try:
             msg_num = int(args[0])
             user = User(session["user"])
@@ -179,7 +181,7 @@ class POP3Server:
                 self._send_reply(addr, f"-ERR No such message")
         except (ValueError, IndexError):
             self._send_reply(addr, "-ERR Invalid message number")
-    
+
     def _cmd_DELE(self, addr, session, args):
         if session["state"] != "TRANSACTION":
             self._send_reply(addr, "-ERR Command not allowed here")
@@ -187,7 +189,7 @@ class POP3Server:
         if not args:
             self._send_reply(addr, "-ERR Missing argument")
             return
-        
+
         try:
             msg_num = int(args[0])
             user = User(session["user"])
@@ -208,9 +210,9 @@ class POP3Server:
             messages = self.storage.list_messages(user)
             marked_for_deletion = sorted(list(session["marked_for_deletion"]), reverse=True)
             for msg_num in marked_for_deletion:
-                filename = messages[msg_num-1][0]
+                filename = messages[msg_num - 1][0]
                 self.storage.delete_email(user, filename)
-        
+
         self._send_reply(addr, "+OK POP3 server signing off")
         self._senders.pop(addr, None)
 

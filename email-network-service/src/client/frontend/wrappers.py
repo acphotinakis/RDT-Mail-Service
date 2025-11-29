@@ -2,18 +2,19 @@ import os
 from email import message_from_string
 from typing import List, Optional
 
-from src.client.frontend.models import EmailData, EmailData
-from src.smtp.smtp_client import SMTPClient
-from src.pop3.pop3_client import POP3Client
-from src.mailbox.storage_manager import StorageManager
-from src.auth.user import User
+from client.frontend.models import EmailData, EmailData
+from smtp.smtp_client import SMTPClient
+from pop3.pop3_client import POP3Client
+from mailbox.storage_manager import StorageManager
+from auth.user import User
 
 DATABASE_PATH = "email-network-service/database/mailboxes"
+
 
 def _parse_email_file(uid: str, content: str) -> Optional[EmailData]:
     """Parses raw email content into an EmailData object."""
     msg = message_from_string(content)
-    
+
     body_html = None
     body_text = None
 
@@ -44,8 +45,10 @@ def _parse_email_file(uid: str, content: str) -> Optional[EmailData]:
         raw_message=msg,
     )
 
+
 class StorageWrapper:
     """A wrapper for interacting with the local email storage."""
+
     def __init__(self):
         self.storage_manager = StorageManager()
 
@@ -63,7 +66,6 @@ class StorageWrapper:
                 if email_data:
                     emails.append(email_data)
         return emails
-
 
     def get_email(self, user: str, uid: str) -> Optional[EmailData]:
         """
@@ -87,7 +89,6 @@ class StorageWrapper:
                 return os.path.basename(saved_path)
         return None
 
-
     def delete_email(self, user: str, uid: str) -> bool:
         """Moves an email to a 'trash' subdirectory."""
         # This is inefficient and also doesn't work with the current StorageManager API
@@ -105,6 +106,7 @@ class SMTPWrapper:
         client = SMTPClient()
         # The recipients list is expected to have one recipient
         return client.send_email(sender, recipients[0], subject, body)
+
 
 class POP3Wrapper:
     """A wrapper for fetching emails via the POP3 client."""

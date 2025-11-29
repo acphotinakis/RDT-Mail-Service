@@ -4,9 +4,9 @@ import os
 import json
 from typing import Dict, Optional, Tuple, List
 
-from src.auth.user import User
-from src.common.config import MAILBOXES_DIR
-from src.common.logger import get_class_logger
+from auth.user import User
+from common.config import MAILBOXES_DIR
+from common.logger import get_class_logger
 
 
 class MailboxReader:
@@ -67,9 +67,7 @@ class MailboxReader:
             - STAT (count & total size)
             - UIDL (UID listing)
         """
-        self.log.info(
-            f"--- BEGIN MAILBOX LISTING transaction for user '{user.username}' ---"
-        )
+        self.log.info(f"--- BEGIN MAILBOX LISTING transaction for user '{user.username}' ---")
 
         user_dir = os.path.join(MAILBOXES_DIR, user.username)
         metadata_path = os.path.join(user_dir, "metadata.json")
@@ -107,9 +105,7 @@ class MailboxReader:
             f"    Total visible messages: {len(listing)}\n"
             f"    Total size (bytes): {total_size}"
         )
-        self.log.info(
-            f"--- END MAILBOX LISTING transaction for user '{user.username}' ---"
-        )
+        self.log.info(f"--- END MAILBOX LISTING transaction for user '{user.username}' ---")
 
         return listing
 
@@ -121,8 +117,7 @@ class MailboxReader:
         Used by POP3 RETR handler.
         """
         self.log.info(
-            f"--- BEGIN READ MESSAGE for user '{user.username}' "
-            f"(filename='{filename}') ---"
+            f"--- BEGIN READ MESSAGE for user '{user.username}' " f"(filename='{filename}') ---"
         )
 
         user_dir = os.path.join(MAILBOXES_DIR, user.username)
@@ -139,8 +134,7 @@ class MailboxReader:
                 content = f.read()
 
             self.log.info(
-                f"Successfully loaded {len(content)} bytes "
-                f"from message file '{filename}'."
+                f"Successfully loaded {len(content)} bytes " f"from message file '{filename}'."
             )
             self.log.info(f"--- END READ MESSAGE for user '{user.username}' ---")
             return content
@@ -159,9 +153,7 @@ class MailboxReader:
         """
         Returns the UID associated with a message file.
         """
-        self.log.debug(
-            f"Looking up UID for user '{user.username}', filename='{filename}'."
-        )
+        self.log.debug(f"Looking up UID for user '{user.username}', filename='{filename}'.")
 
         user_dir = os.path.join(MAILBOXES_DIR, user.username)
         metadata_path = os.path.join(user_dir, "metadata.json")

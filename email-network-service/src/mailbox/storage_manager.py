@@ -4,15 +4,15 @@ import os
 import json
 from typing import Dict, Optional, Tuple, List
 
-from src.auth.user import User
-from src.common.config import MAILBOXES_DIR
-from src.common.logger import get_class_logger
+from auth.user import User
+from common.config import MAILBOXES_DIR
+from common.logger import get_class_logger
 
-from src.mailbox.mailbox_reader import MailboxReader
-from src.mailbox.mailbox_writer import MailboxWriter
+from mailbox.mailbox_reader import MailboxReader
+from mailbox.mailbox_writer import MailboxWriter
 
 import threading
-from src.client.frontend.models import EmailData
+from client.frontend.models import EmailData
 
 
 class StorageManager:
@@ -75,9 +75,7 @@ class StorageManager:
         self.log.debug(f"[SAVE] Request to save email for user '{username}'.")
 
         with lock:
-            self.log.debug(
-                f"[SAVE] Lock acquired for '{username}'. Delegating to writer..."
-            )
+            self.log.debug(f"[SAVE] Lock acquired for '{username}'. Delegating to writer...")
 
             try:
                 saved_path = self.mailbox_writer.write_email(user, email_data)
@@ -116,9 +114,7 @@ class StorageManager:
         self.log.debug(f"[LIST] Listing messages for '{username}'.")
 
         with lock:
-            self.log.debug(
-                f"[LIST] Lock acquired for '{username}'. Reading metadata..."
-            )
+            self.log.debug(f"[LIST] Lock acquired for '{username}'. Reading metadata...")
 
             try:
                 entries = self.mailbox_reader.list_messages(user)
@@ -149,21 +145,15 @@ class StorageManager:
         username = user.username.lower()
         lock = self.get_lock(username)
 
-        self.log.debug(
-            f"[GET] Request to retrieve message '{filename}' for user '{username}'."
-        )
+        self.log.debug(f"[GET] Request to retrieve message '{filename}' for user '{username}'.")
 
         with lock:
-            self.log.debug(
-                f"[GET] Lock acquired for '{username}'. Reading message file..."
-            )
+            self.log.debug(f"[GET] Lock acquired for '{username}'. Reading message file...")
 
             try:
                 contents = self.mailbox_reader.read_message(user, filename)
                 if contents is None:
-                    self.log.warning(
-                        f"[GET] Message '{filename}' not found for '{username}'."
-                    )
+                    self.log.warning(f"[GET] Message '{filename}' not found for '{username}'.")
                 else:
                     self.log.debug(
                         f"[GET] Successfully loaded message '{filename}' ({len(contents)} chars)."
@@ -192,9 +182,7 @@ class StorageManager:
         username = user.username.lower()
         lock = self.get_lock(username)
 
-        self.log.debug(
-            f"[UID] Request to load UID for '{filename}' (user: '{username}')."
-        )
+        self.log.debug(f"[UID] Request to load UID for '{filename}' (user: '{username}').")
 
         with lock:
             self.log.debug(f"[UID] Lock acquired for '{username}'. Looking up UID...")
@@ -204,9 +192,7 @@ class StorageManager:
                 if uid:
                     self.log.debug(f"[UID] UID for '{filename}' is '{uid}'.")
                 else:
-                    self.log.warning(
-                        f"[UID] No UID found for '{filename}' in metadata.json."
-                    )
+                    self.log.warning(f"[UID] No UID found for '{filename}' in metadata.json.")
                 return uid
 
             except Exception as e:
@@ -218,7 +204,7 @@ class StorageManager:
 
             finally:
                 self.log.debug(f"[UID] Lock released for '{username}'.")
-    
+
     # ----------------------------------------------------------------------
     # 5. DELETE MESSAGE (POP3 - DELE)
     # ----------------------------------------------------------------------
@@ -245,9 +231,7 @@ class StorageManager:
                 if success:
                     self.log.debug(f"[DELETE] Successfully marked '{filename}' as deleted.")
                 else:
-                    self.log.warning(
-                        f"[DELETE] Failed to mark '{filename}' as deleted."
-                    )
+                    self.log.warning(f"[DELETE] Failed to mark '{filename}' as deleted.")
                 return success
 
             except Exception as e:

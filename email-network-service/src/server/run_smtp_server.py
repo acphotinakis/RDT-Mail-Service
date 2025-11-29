@@ -1,8 +1,9 @@
 import sys
 import threading
 import time
-from src.common.config import SMTP_SERVER_HOST, SMTP_SERVER_PORT
-from src.smtp.smtp_server import SMTPServer
+from common.config import SMTP_SERVER_HOST, SMTP_SERVER_PORT
+from smtp.smtp_server import SMTPServer
+
 
 def main():
     """
@@ -21,6 +22,7 @@ def main():
         server.stop()
         print("SMTP server stopped.")
         sys.exit(0)
+
 
 if __name__ == "__main__":
     main()

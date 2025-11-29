@@ -1,7 +1,7 @@
 # Path: src/rdt/rdt_sender.py
 import socket
-from src.common.logger import get_class_logger
-from src.rdt.rdt_config import RDT_TIMEOUT, RDT_RECV_BUFSIZE
+from common.logger import get_class_logger
+from .rdt_config import RDT_TIMEOUT, RDT_RECV_BUFSIZE
 from .rdt_packet import make_data_packet, unpack_and_validate
 
 
@@ -64,16 +64,12 @@ class RDTSender:
                     return  # Exit blocks, ready for next call from above
                 else:
                     # Event: isACK(rcvpkt, wrong_seq). Action: Do nothing.
-                    self.log.debug(
-                        f"Sender: Received wrong ACK {rcvpkt.get('seq')}. Ignoring."
-                    )
+                    self.log.debug(f"Sender: Received wrong ACK {rcvpkt.get('seq')}. Ignoring.")
                     continue
 
             except socket.timeout:
                 # Event: timeout. Action: udt_send(sndpkt), start_timer
-                self.log.info(
-                    f"Sender: Timeout waiting for ACK {self.curr_seq}. Retransmitting."
-                )
+                self.log.info(f"Sender: Timeout waiting for ACK {self.curr_seq}. Retransmitting.")
                 # Loop continues, triggering retransmission at top of loop
                 continue
             except Exception as e:
