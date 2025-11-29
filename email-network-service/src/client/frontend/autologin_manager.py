@@ -1,10 +1,12 @@
 import json
 import os
 from typing import Optional, Tuple
+import logging
 
 # Simple config file to store autologin credentials.
 # In a real app, this would be in a more standard user config location.
 AUTOLOGIN_FILE = ".autologin.json"
+log = logging.getLogger(__name__)
 
 
 def get_saved_credentials() -> Optional[Tuple[str, str]]:
@@ -13,6 +15,7 @@ def get_saved_credentials() -> Optional[Tuple[str, str]]:
     Returns (username, password) or None if not found or invalid.
     """
     if not os.path.exists(AUTOLOGIN_FILE):
+        log.info("No autologin file found.")
         return None
 
     try:
@@ -21,12 +24,14 @@ def get_saved_credentials() -> Optional[Tuple[str, str]]:
             username = data.get("username")
             password = data.get("password")
             if username and password:
+                log.info(f"Found saved credentials for user: {username}")
                 return username, password
-    except (json.JSONDecodeError, IOError):
+            log.warning("Autologin file is missing username or password.")
+            return None
+    except (json.JSONDecodeError, IOError) as e:
         # If file is corrupted or unreadable, treat as if it doesn't exist.
+        log.error(f"Failed to read autologin file: {e}")
         return None
-    
-    return None
 
 
 def save_credentials(username: str, password: str):
@@ -39,8 +44,10 @@ def save_credentials(username: str, password: str):
             json.dump({"username": username, "password": password}, f, indent=2)
         # Restrict permissions to only the current user
         os.chmod(AUTOLOGIN_FILE, 0o600)
-    except IOError:
+        log.info(f"Saved credentials for user: {username}")
+    except IOError as e:
         # Failed to write file, can't do much.
+        log.error(f"Failed to save autologin file: {e}")
         pass
 
 
@@ -49,5 +56,7 @@ def delete_credentials():
     if os.path.exists(AUTOLOGIN_FILE):
         try:
             os.remove(AUTOLOGIN_FILE)
-        except OSError:
+            log.info("Deleted autologin file.")
+        except OSError as e:
+            log.error(f"Failed to delete autologin file: {e}")
             pass

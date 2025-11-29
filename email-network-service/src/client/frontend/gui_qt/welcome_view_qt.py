@@ -1,5 +1,6 @@
 from typing import Optional
 from PySide6.QtWidgets import QDialog, QDialogButtonBox, QLabel, QVBoxLayout
+from src.common.logger import get_class_logger
 
 
 class WelcomeDialog(QDialog):
@@ -7,6 +8,7 @@ class WelcomeDialog(QDialog):
 
     def __init__(self, error_message: Optional[str] = None, parent=None):
         super().__init__(parent)
+        self.log = get_class_logger(self)
         self.result_choice: Optional[str] = None
         self.setWindowTitle("Welcome")
         self.resize(360, 180)
@@ -31,12 +33,17 @@ class WelcomeDialog(QDialog):
         cancel_btn.clicked.connect(self.reject)
 
         layout.addWidget(buttons)
+        self.log.info("WelcomeDialog initialized.")
 
     def _choose(self, choice: str):
+        self.log.info(f"User chose '{choice}' from welcome screen.")
         self.result_choice = choice
         self.accept()
 
     def get_choice(self) -> Optional[str]:
+        self.log.debug("Showing welcome dialog.")
         if self.exec() == QDialog.DialogCode.Accepted:
+            self.log.info(f"Welcome dialog accepted with choice: {self.result_choice}")
             return self.result_choice
+        self.log.info("Welcome dialog cancelled.")
         return None

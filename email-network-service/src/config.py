@@ -1,20 +1,7 @@
-# src/common/config.py additions:
 import os
+import logging
 
-# The root of the runtime database directory
-DATABASE_PATH = os.path.join(os.getcwd(), "database")
-
-# The specific file holding user credentials
-USER_DB_FILE = os.path.join(DATABASE_PATH, "users.json")
-
-# The directory holding user mailboxes
-MAILBOXES_DIR = os.path.join(DATABASE_PATH, "mailboxes")
-
-# The directory holding temp emails
-TEMP_EMAILS_DIR = os.path.join(DATABASE_PATH, "temp_emails")
-
-
-import os
+log = logging.getLogger(__name__)
 
 # ------------------------------------------------------------------------------
 # Network Configuration
@@ -27,52 +14,59 @@ SERVER_BIND_IP = "127.0.0.1"
 
 # SMTP Server Configuration
 SMTP_SERVER_HOST = SERVER_BIND_IP
-# We use 2525 because standard port 25 often requires root privileges
-SMTP_SERVER_PORT = 2525
+SMTP_SERVER_PORT = 2525  # Use 2525 as 25 may require root
 
 # POP3 Server Configuration
 POP3_SERVER_HOST = SERVER_BIND_IP
-# We use 1100 because standard port 110 often requires root privileges
-POP3_SERVER_PORT = 1100
+POP3_SERVER_PORT = 1100  # Use 1100 as 110 may require root
 
 # Client Configuration
 CLIENT_IP = "127.0.0.1"
-# The specific port the client's RDTReceiver binds to for listening to server responses.
-# In a full production system, this might be dynamic (ephemeral), but fixed helps RDT logic here.
 CLIENT_LISTENING_PORT = 2526
-
 
 # ------------------------------------------------------------------------------
 # RDT Protocol Configuration
 # ------------------------------------------------------------------------------
 
-# Time (in seconds) to wait for an ACK before retransmitting a packet
-RDT_TIMEOUT = 2.0
-
-# Maximum size (in bytes) of a UDP packet payload to accept
-# This must be large enough to hold your largest expected JSON header + data chunk
-RDT_RECV_BUFSIZE = 4096
-
+RDT_TIMEOUT = 2.0  # Seconds to wait for ACK
+RDT_RECV_BUFSIZE = 4096  # Max UDP packet size
 
 # ------------------------------------------------------------------------------
 # Storage / Database Configuration
 # ------------------------------------------------------------------------------
 
-# Root directory for runtime data
 BASE_DIR = os.getcwd()
 DATABASE_PATH = os.path.join(BASE_DIR, "database")
-
-# Path to the JSON file storing user credentials
 USER_DB_FILE = os.path.join(DATABASE_PATH, "users.json")
-
-# Directory where user mailboxes (and their metadata.json files) are stored
 MAILBOXES_DIR = os.path.join(DATABASE_PATH, "mailboxes")
-
-# Directory for temporary files during atomic write operations
 TEMP_EMAILS_DIR = os.path.join(DATABASE_PATH, "temp")
-
 
 # ------------------------------------------------------------------------------
 # Logging Configuration
 # ------------------------------------------------------------------------------
+
 LOG_LEVEL = "DEBUG"  # Options: DEBUG, INFO, WARNING, ERROR, CRITICAL
+
+
+def log_config():
+    """Logs the current configuration settings."""
+    log.info("--- Application Configuration ---")
+    # Network
+    log.info(f"SERVER_BIND_IP: {SERVER_BIND_IP}")
+    log.info(f"SMTP_SERVER_HOST: {SMTP_SERVER_HOST}")
+    log.info(f"SMTP_SERVER_PORT: {SMTP_SERVER_PORT}")
+    log.info(f"POP3_SERVER_HOST: {POP3_SERVER_HOST}")
+    log.info(f"POP3_SERVER_PORT: {POP3_SERVER_PORT}")
+    log.info(f"CLIENT_IP: {CLIENT_IP}")
+    log.info(f"CLIENT_LISTENING_PORT: {CLIENT_LISTENING_PORT}")
+    # RDT
+    log.info(f"RDT_TIMEOUT: {RDT_TIMEOUT}")
+    log.info(f"RDT_RECV_BUFSIZE: {RDT_RECV_BUFSIZE}")
+    # Storage
+    log.info(f"DATABASE_PATH: {DATABASE_PATH}")
+    log.info(f"USER_DB_FILE: {USER_DB_FILE}")
+    log.info(f"MAILBOXES_DIR: {MAILBOXES_DIR}")
+    log.info(f"TEMP_EMAILS_DIR: {TEMP_EMAILS_DIR}")
+    # Logging
+    log.info(f"LOG_LEVEL: {LOG_LEVEL}")
+    log.info("-----------------------------")

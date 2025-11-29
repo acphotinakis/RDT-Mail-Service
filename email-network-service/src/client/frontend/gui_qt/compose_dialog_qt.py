@@ -6,7 +6,9 @@ from PySide6.QtWidgets import (
     QLineEdit,
     QTextEdit,
     QVBoxLayout,
+    QMessageBox,
 )
+from src.common.logger import get_class_logger
 
 
 class ComposeDialog(QDialog):
@@ -14,6 +16,7 @@ class ComposeDialog(QDialog):
 
     def __init__(self, parent=None, initial_data: Optional[Dict[str, str]] = None):
         super().__init__(parent)
+        self.log = get_class_logger(self)
         self.initial = initial_data or {}
         self.result_data: Optional[Dict[str, str]] = None
         self.setWindowTitle("Compose Email")
@@ -40,6 +43,9 @@ class ComposeDialog(QDialog):
         buttons.accepted.connect(self._on_accept)
         buttons.rejected.connect(self.reject)
         layout.addWidget(buttons)
+        self.log.info("ComposeDialog initialized.")
+        if self.initial:
+            self.log.debug(f"Initial data provided: {self.initial}")
 
     def _on_accept(self):
         recipient = self.to_edit.text().strip()
@@ -47,13 +53,18 @@ class ComposeDialog(QDialog):
         body = self.body_edit.toPlainText()
 
         if not recipient or not subject:
-            # Keep dialog open; caller will consider None as cancel.
+            self.log.warning("Compose submission failed: recipient or subject is empty.")
+            QMessageBox.warning(self, "Validation Error", "To and Subject fields cannot be empty.")
             return
 
         self.result_data = {"recipient": recipient, "subject": subject, "body": body}
+        self.log.info(f"Email composed for recipient: {recipient}")
         self.accept()
 
     def get_data(self) -> Optional[Dict[str, str]]:
+        self.log.debug("Showing compose dialog.")
         if self.exec() == QDialog.DialogCode.Accepted:
+            self.log.info("Compose dialog accepted.")
             return self.result_data
+        self.log.info("Compose dialog cancelled.")
         return None

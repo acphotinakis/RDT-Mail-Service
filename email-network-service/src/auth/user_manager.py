@@ -23,6 +23,8 @@ class UserManager:
         if cls._instance is None:
             with cls._lock:
                 if cls._instance is None:
+                    cls.log = get_class_logger(cls)
+                    cls.log.debug("Creating new UserManager instance")
                     cls._instance = super(UserManager, cls).__new__(cls)
                     cls._instance._initialize()
         return cls._instance
@@ -54,10 +56,13 @@ class UserManager:
                     if not isinstance(users_list, list):
                         raise ValueError("Invalid users.json format (users is not a list)")
                     for user_data in users_list:
-                        user = User.from_dict(user_data)
-                        self.users[user.username] = user
-                        self.log.debug(f"Loaded user: {user.username}")
-            except (json.JSONDecodeError, IOError) as e:
+                        try:
+                            user = User.from_dict(user_data)
+                            self.users[user.username] = user
+                            self.log.debug(f"Loaded user: {user.username}")
+                        except ValueError as e:
+                            self.log.warning(f"Skipping invalid user record: {e}")
+            except (json.JSONDecodeError, IOError, ValueError) as e:
                 self.log.error(f"Failed to load user database: {e}")
 
     def _save_users(self):

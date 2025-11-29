@@ -7,6 +7,7 @@ from PySide6.QtWidgets import (
     QLabel,
     QVBoxLayout,
 )
+from src.common.logger import get_class_logger
 
 
 class LoginDialog(QDialog):
@@ -14,6 +15,7 @@ class LoginDialog(QDialog):
 
     def __init__(self, error_message: Optional[str] = None, parent=None):
         super().__init__(parent)
+        self.log = get_class_logger(self)
         self.result_data: Optional[Tuple[str, str]] = None
         self.setWindowTitle("Login")
         self.resize(360, 200)
@@ -34,29 +36,36 @@ class LoginDialog(QDialog):
         form.addRow("Username", self.username_edit)
 
         self.password_edit = QLineEdit()
+        self.password_edit.setEchoMode(QLineEdit.EchoMode.Password)
         form.addRow("Password", self.password_edit)
 
-        buttons = buttons = QDialogButtonBox(
+        buttons = QDialogButtonBox(
             QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
         )
         buttons.accepted.connect(self._on_accept)
         buttons.rejected.connect(self.reject)
         layout.addWidget(buttons)
+        self.log.info("LoginDialog initialized.")
 
     def _on_accept(self):
         username = self.username_edit.text().strip()
         password = self.password_edit.text().strip()
 
         if not username or not password:
+            self.log.warning("Login attempt with empty fields.")
             self.error_label.setText("Both fields are required.")
             return
 
+        self.log.info(f"Login attempt for user: {username}")
         self.result_data = (username, password)
         self.accept()
 
     def get_data(self) -> Optional[Tuple[str, str]]:
-        if self.exec() == QDialog.accepted:
+        self.log.debug("Showing login dialog.")
+        if self.exec() == QDialog.DialogCode.Accepted:
+            self.log.info("Login dialog accepted.")
             return self.result_data
+        self.log.info("Login dialog cancelled.")
         return None
 
 
@@ -65,6 +74,7 @@ class SignupDialog(QDialog):
 
     def __init__(self, error_message: Optional[str] = None, parent=None):
         super().__init__(parent)
+        self.log = get_class_logger(self)
         self.result_data: Optional[Dict[str, str]] = None
         self.setWindowTitle("Sign Up")
         self.resize(360, 240)
@@ -85,9 +95,11 @@ class SignupDialog(QDialog):
         form.addRow("Username", self.username_edit)
 
         self.password_edit = QLineEdit()
+        self.password_edit.setEchoMode(QLineEdit.EchoMode.Password)
         form.addRow("Password", self.password_edit)
 
         self.confirm_edit = QLineEdit()
+        self.confirm_edit.setEchoMode(QLineEdit.EchoMode.Password)
         form.addRow("Confirm", self.confirm_edit)
 
         buttons = QDialogButtonBox(
@@ -96,6 +108,7 @@ class SignupDialog(QDialog):
         buttons.accepted.connect(self._on_accept)
         buttons.rejected.connect(self.reject)
         layout.addWidget(buttons)
+        self.log.info("SignupDialog initialized.")
 
     def _on_accept(self):
         username = self.username_edit.text().strip()
@@ -103,17 +116,23 @@ class SignupDialog(QDialog):
         confirm = self.confirm_edit.text().strip()
 
         if not username or not password or not confirm:
+            self.log.warning("Signup attempt with empty fields.")
             self.error_label.setText("All fields are required.")
             return
 
         if password != confirm:
+            self.log.warning("Signup attempt with non-matching passwords.")
             self.error_label.setText("Passwords do not match.")
             return
 
+        self.log.info(f"Signup attempt for new user: {username}")
         self.result_data = {"user": username, "password": password}
         self.accept()
 
     def get_data(self) -> Optional[Dict[str, str]]:
-        if self.exec() == QDialog.accepted:
+        self.log.debug("Showing signup dialog.")
+        if self.exec() == QDialog.DialogCode.Accepted:
+            self.log.info("Signup dialog accepted.")
             return self.result_data
+        self.log.info("Signup dialog cancelled.")
         return None

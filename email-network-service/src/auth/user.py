@@ -35,7 +35,12 @@ class User:
         self.log.info(f"Password for user {self.username} has been saved (raw).")
 
     def verify_password(self, raw_password: str) -> bool:
-        return self.password == raw_password
+        verified = self.password == raw_password
+        if verified:
+            self.log.debug(f"Password verification successful for {self.username}")
+        else:
+            self.log.warning(f"Password verification failed for {self.username}")
+        return verified
 
     # ---------------------------------------------------------
     # Serialization
@@ -43,6 +48,7 @@ class User:
 
     def to_dict(self) -> Dict[str, str]:
         """Serializes user data for JSON storage."""
+        self.log.debug(f"Serializing user {self.username} to dict.")
         return {
             "username": self.username,
             "password": self.password,
