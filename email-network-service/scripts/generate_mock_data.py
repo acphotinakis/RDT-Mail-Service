@@ -19,7 +19,7 @@ from src.auth.user_manager import UserManager
 from src.client.frontend.models.email_data import EmailData
 from src.mailbox.mailbox_writer import MailboxWriter
 from src.auth.user import User
-from src.common.config import MAILBOXES_DIR, TEMP_EMAILS_DIR, USER_DB_FILE
+from src.config import MAILBOXES_DIR, TEMP_EMAILS_DIR, USER_DB_FILE
 
 fake = Faker()
 TOTAL_USERS = 50

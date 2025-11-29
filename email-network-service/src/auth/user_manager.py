@@ -3,7 +3,7 @@ import json
 import threading
 import bcrypt
 from typing import Optional, Dict
-from src.common.config import USER_DB_FILE, MAILBOXES_DIR
+from src.config import USER_DB_FILE, MAILBOXES_DIR
 from src.common.logger import get_class_logger
 from src.auth.user import User
 

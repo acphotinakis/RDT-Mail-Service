@@ -2,11 +2,11 @@ import pytest
 from threading import Thread
 from time import sleep
 
-from smtp.smtp_server import SMTPServer
-from smtp.smtp_client import SMTPClient
-from src.common.config import SMTP_SERVER_HOST, SMTP_SERVER_PORT
+from src.smtp.smtp_server import SMTPServer
+from src.smtp.smtp_client import SMTPClient
+from src.config import SMTP_SERVER_HOST, SMTP_SERVER_PORT
 from src.auth.user_manager import UserManager
-from mailbox.storage_manager import StorageManager
+from src.mailbox.storage_manager import StorageManager
 from src.auth.user import User
 
 
@@ -16,8 +16,7 @@ def server():
     UserManager().create_user("testuser", "password")
 
     server = SMTPServer(SMTP_SERVER_HOST, SMTP_SERVER_PORT)
-    server_thread = Thread(target=server.start, daemon=True)
-    server_thread.start()
+    server.start()
     sleep(1)  # Give the server time to start
     yield
     server.stop()
@@ -43,5 +42,5 @@ def test_smtp_integration(server):
 
     filename = messages[0][0]
     content = storage.get_message_content(User("testuser"), filename)
-    assert subject in content
-    assert body in content
+    assert subject in str(content)
+    assert body in str(content)

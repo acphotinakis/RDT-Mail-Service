@@ -2,7 +2,7 @@
 
 from src.auth.user import User
 from src.client.frontend.models import EmailData
-from src.common.config import MAILBOXES_DIR, TEMP_EMAILS_DIR
+from src.config import MAILBOXES_DIR, TEMP_EMAILS_DIR
 import os
 import uuid
 import time

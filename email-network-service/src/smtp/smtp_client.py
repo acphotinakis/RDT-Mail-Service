@@ -1,11 +1,13 @@
 import time
+import socket
 from typing import Optional
 from src.common.logger import get_class_logger
-from src.common.config import (
+from src.config import (
     SMTP_SERVER_HOST,
     SMTP_SERVER_PORT,
     CLIENT_IP,
     CLIENT_LISTENING_PORT,
+    RDT_TIMEOUT,
 )
 from src.common.exceptions import SMTPProtocolError, SMTPConnectionError
 from src.rdt.rdt_sender import RDTSender
@@ -29,21 +31,24 @@ class SMTPClient:
 
     def __init__(self):
         """
-        Initializes the SMTP client components.
+        Initializes the SMTP client components, creating and sharing a single socket.
         """
         self.log = get_class_logger(self)
 
-        # RDT Sender to transmit commands to the server
-        self.rdt_sender = RDTSender(SMTP_SERVER_HOST, SMTP_SERVER_PORT)
+        # Create and bind the shared socket
+        self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.sock.bind((CLIENT_IP, CLIENT_LISTENING_PORT))
+        self.sock.settimeout(RDT_TIMEOUT)
 
-        # RDT Receiver to listen for replies from the server.
-        # Note: The network architecture must ensure server replies are
-        # routed to this listening port.
-        self.rdt_receiver = RDTReceiver(CLIENT_IP, CLIENT_LISTENING_PORT)
+        self.rdt_sender = RDTSender(SMTP_SERVER_HOST, SMTP_SERVER_PORT, self.sock)
 
-        self.receiver_gen = None
+        self.rdt_receiver = RDTReceiver(
+            listen_host=None, listen_port=None, sock=self.sock, yield_addr=False
+        )
+        self.receiver_gen = self.rdt_receiver.start_receiving()
+
         self.is_connected = False
-        self.log.info("SMTPClient initialized.")
+        self.log.info("SMTPClient initialized with a shared socket.")
 
     def send_email(self, sender: str, recipient: str, subject: str, body: str) -> bool:
         """
@@ -89,6 +94,10 @@ class SMTPClient:
         try:
             # Start listening for server responses
             self.receiver_gen = self.rdt_receiver.start_receiving()
+
+            # Initiate connection by sending an empty packet to the server
+            # This allows the server to recognize our address and send the welcome message
+            self.rdt_sender.send(b"")
 
             # Wait for 220 Service ready greeting
             code, msg = self._get_reply()
@@ -171,8 +180,16 @@ class SMTPClient:
         self.log.debug("Waiting for response...")
         try:
             # Get next data chunk from the receiver generator
-            data_bytes = next(self.receiver_gen)
+            packet = next(self.receiver_gen)
+
+            # receiver may or may not send address tuple depending on yield_addr flag
+            if isinstance(packet, tuple):
+                data_bytes, _addr = packet
+            else:
+                data_bytes = packet
+
             reply_str = data_bytes.decode("ascii").strip()
+
             self.log.debug(f"<<< {reply_str}")
 
             # Parse out the 3-digit code and the message
@@ -194,10 +211,15 @@ class SMTPClient:
             raise e
 
     def _close(self):
-        """Cleans up RDT resources."""
+        """Cleans up RDT resources and closes the shared socket."""
         self.log.debug("Closing RDT resources.")
         if self.rdt_receiver:
             self.rdt_receiver.stop()
         if self.rdt_sender:
             self.rdt_sender.close()
+
+        # Closing the socket will unblock the receiver thread
+        if self.sock:
+            self.sock.close()
+
         self.is_connected = False

@@ -1,7 +1,7 @@
 import sys
 import threading
 import time
-from src.common.config import SMTP_SERVER_HOST, SMTP_SERVER_PORT
+from src.config import SMTP_SERVER_HOST, SMTP_SERVER_PORT
 from smtp.smtp_server import SMTPServer
 
 

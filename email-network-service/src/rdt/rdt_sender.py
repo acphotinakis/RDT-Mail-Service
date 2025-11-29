@@ -8,16 +8,20 @@ from .rdt_packet import make_data_packet, unpack_and_validate
 class RDTSender:
     """
     RDT 3.0 (Stop-and-Wait) Sender over UDP.
+    This class now uses a socket provided by its owner.
     """
 
-    def __init__(self, dest_host: str, dest_port: int):
+    def __init__(self, dest_host: str, dest_port: int, sock: socket.socket):
+        """
+        Initializes the sender with an existing socket.
+        Args:
+            dest_host: The destination hostname or IP address.
+            dest_port: The destination port.
+            sock: The UDP socket to send from. Its timeout is used for retransmissions.
+        """
         self.log = get_class_logger(self)
         self.dest_addr = (dest_host, dest_port)
-
-        # UDP Socket setup
-        self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        # The socket timeout serves as the RDT retransmission timer
-        self.sock.settimeout(RDT_TIMEOUT)
+        self.sock = sock
 
         # RDT 3.0 State: The sequence number next to be sent (starts at 0)
         self.curr_seq = 0
@@ -77,6 +81,5 @@ class RDTSender:
                 raise e
 
     def close(self):
-        """Closes the UDP socket."""
-        self.sock.close()
-        self.log.info("RDTSender closed.")
+        """Does NOT close the socket as it's shared."""
+        self.log.info("RDTSender closed (socket managed externally).")

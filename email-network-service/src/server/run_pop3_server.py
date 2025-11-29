@@ -1,6 +1,6 @@
 import sys
 import time
-from src.common.config import POP3_SERVER_HOST, POP3_SERVER_PORT
+from src.config import POP3_SERVER_HOST, POP3_SERVER_PORT
 from pop3.pop3_server import POP3Server
 
 

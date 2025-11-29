@@ -4,7 +4,7 @@ from time import sleep
 
 from src.rdt.rdt_sender import RDTSender
 from src.rdt.rdt_receiver import RDTReceiver
-from src.common.config import RDT_TIMEOUT
+from src.config import RDT_TIMEOUT
 
 HOST = "127.0.0.1"
 SENDER_PORT = 9000

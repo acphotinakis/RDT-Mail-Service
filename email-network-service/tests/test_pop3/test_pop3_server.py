@@ -4,7 +4,7 @@ from time import sleep
 
 from pop3.pop3_server import POP3Server
 from pop3.pop3_client import POP3Client
-from src.common.config import POP3_SERVER_HOST, POP3_SERVER_PORT, CLIENT_IP, CLIENT_LISTENING_PORT
+from src.config import POP3_SERVER_HOST, POP3_SERVER_PORT, CLIENT_IP, CLIENT_LISTENING_PORT
 from src.auth.user_manager import UserManager
 from mailbox.storage_manager import StorageManager
 from src.auth.user import User

@@ -5,7 +5,7 @@ import json
 from typing import Dict, Optional, Tuple, List
 
 from src.auth.user import User
-from src.common.config import MAILBOXES_DIR
+from src.config import MAILBOXES_DIR
 from src.common.logger import get_class_logger
 
 from src.mailbox.mailbox_reader import MailboxReader

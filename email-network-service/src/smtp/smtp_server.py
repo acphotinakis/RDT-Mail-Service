@@ -4,6 +4,7 @@ import re
 import threading
 from enum import Enum, auto
 from typing import Optional, Tuple, Dict, Any
+import socket
 
 from email.parser import BytesParser
 from email.policy import default as email_policy
@@ -59,15 +60,41 @@ class SMTPServer:
         self.host = host
         self.port = port
 
-        self.rdt_receiver = RDTReceiver(host, port)
-        self._senders: Dict[Tuple[str, int], RDTSender] = {}
+        # Create ONE socket for all RDT operations on server side
+        self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.sock.bind((host, port))
 
+        # Receiver uses the same socket
+        self.rdt_receiver = RDTReceiver(sock=self.sock, yield_addr=True)
+
+        self._senders = {}
         self.storage = StorageManager()
-
         self._running = False
-        self._thread: Optional[threading.Thread] = None
+        self._thread = None
 
         self.log.info(f"SMTP server initialized on {self.host}:{self.port}")
+
+    # def __init__(self, host: str, port: int):
+    #     self.log = get_class_logger(self)
+    #     self.log.info("Initializing SMTP server module...")
+
+    #     self.host = host
+    #     self.port = port
+
+    #     self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    #     self.sock.bind((host, port))
+
+    #     # Pass the SAME socket into RDTReceiver
+    #     self.rdt_receiver = RDTReceiver(sock=self.sock, yield_addr=True)
+
+    #     self._senders: Dict[Tuple[str, int], RDTSender] = {}
+
+    #     self.storage = StorageManager()
+
+    #     self._running = False
+    #     self._thread: Optional[threading.Thread] = None
+
+    #     self.log.info(f"SMTP server initialized on {self.host}:{self.port}")
 
     # ------------------------------------------------------------
     # SENDER MANAGEMENT
@@ -76,19 +103,16 @@ class SMTPServer:
         if addr not in self._senders:
             host, port = addr
             self.log.debug(f"Allocating new RDTSender for {addr}")
-            self._senders[addr] = RDTSender(host, port)
+            self._senders[addr] = RDTSender(host, port, self.sock)
         return self._senders[addr]
 
     def _send_reply(self, addr: Tuple[str, int], msg: str):
         if not msg.endswith("\r\n"):
             msg += "\r\n"
 
-        try:
-            sender = self._get_sender(addr)
-            sender.send(msg.encode("ascii", errors="replace"))
-            self.log.debug(f"[SMTP → {addr}] {msg.strip()}")
-        except Exception as e:
-            self.log.exception(f"Error sending SMTP reply to {addr}: {e}")
+        sender = self._get_sender(addr)
+        sender.send(msg.encode("ascii"))
+        self.log.debug(f"[SMTP → {addr}] {msg.strip()}")
 
     # ------------------------------------------------------------
     # SESSION MGMT
