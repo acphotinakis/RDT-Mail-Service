@@ -28,7 +28,7 @@ CLIENT_LISTENING_PORT = 2526
 # RDT Protocol Configuration
 # ------------------------------------------------------------------------------
 
-RDT_TIMEOUT = 2.0  # Seconds to wait for ACK
+RDT_TIMEOUT = 1.0  # Seconds to wait for ACK
 RDT_RECV_BUFSIZE = 4096  # Max UDP packet size
 
 # ------------------------------------------------------------------------------
