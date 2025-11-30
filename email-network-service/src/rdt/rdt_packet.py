@@ -1,76 +1,85 @@
-# Path: src/rdt/rdt_packet.py
-import pickle
+# src/rdt/rdt_packet.py
+import struct
 import logging
-from .checksum import calculate_checksum
+import zlib
 
 log = logging.getLogger(__name__)
 
+# --- Packet Constants ---
+TYPE_DATA = 0
+TYPE_ACK = 1
+HEADER_FORMAT = "!BBI"  # Seq (1B), Type (1B), Checksum (4B)
+HEADER_SIZE = struct.calcsize(HEADER_FORMAT)
 
-def get_canonical_form(pkt_dict):
-    # Create a new dict excluding the checksum for canonical representation
-    dict_for_checksum = pkt_dict.copy()
-    dict_for_checksum.pop('checksum', None)
-    # Return a pickled, sorted list of items for a stable representation
-    return pickle.dumps(sorted(dict_for_checksum.items()))
+
+def calculate_checksum(data: bytes) -> int:
+    """Computes CRC32 checksum."""
+    return zlib.crc32(data) & 0xFFFFFFFF
+
+
+def make_packet(seq_num: int, is_ack: bool, payload: bytes) -> bytes:
+    """
+    Constructs a binary packet.
+    Format: [SEQ: 1B] [TYPE: 1B] [CHECKSUM: 4B] [PAYLOAD: N Bytes]
+    """
+    pkt_type = TYPE_ACK if is_ack else TYPE_DATA
+
+    # 1. Create header with Checksum = 0 temporarily
+    temp_header = struct.pack(HEADER_FORMAT, seq_num, pkt_type, 0)
+
+    # 2. Calculate checksum over the entire packet (header + payload)
+    checksum = calculate_checksum(temp_header + payload)
+
+    # 3. Re-pack header with valid checksum
+    final_header = struct.pack(HEADER_FORMAT, seq_num, pkt_type, checksum)
+
+    return final_header + payload
 
 
 def make_data_packet(seq_num: int, data: bytes) -> bytes:
-    """Creates a serialized DATA packet with seq number, payload, and checksum."""
-    log.debug(f"Creating DATA packet for SEQ={seq_num} with payload size={len(data)}")
-    pkt_dict = {"is_ack": False, "seq": seq_num, "data": data}
-    # Calculate checksum based on a canonical representation
-    checksum = calculate_checksum(get_canonical_form(pkt_dict))
-    pkt_dict["checksum"] = checksum
-    # Return final pickled packet including checksum
-    final_packet = pickle.dumps(pkt_dict)
-    log.debug(f"DATA packet created with size={len(final_packet)} bytes.")
-    return final_packet
+    return make_packet(seq_num, False, data)
 
 
 def make_ack_packet(seq_num: int) -> bytes:
-    """Creates a serialized ACK packet for a given sequence number."""
-    log.debug(f"Creating ACK packet for SEQ={seq_num}")
-    pkt_dict = {
-        "is_ack": True,
-        "seq": seq_num,
-        # ACK packets don't strictly need data payload, but structure should be consistent
-        "data": b"",
-    }
-    checksum = calculate_checksum(get_canonical_form(pkt_dict))
-    pkt_dict["checksum"] = checksum
-    final_packet = pickle.dumps(pkt_dict)
-    log.debug(f"ACK packet created with size={len(final_packet)} bytes.")
-    return final_packet
+    return make_packet(seq_num, True, b"")
 
 
 def unpack_and_validate(packet_bytes: bytes) -> dict | None:
     """
-    Deserializes a packet and validates its checksum.
-    Returns the packet dictionary if valid, or None if corrupt.
+    Parses binary packet, verifies checksum, and returns a dict
+    compatible with the rest of the application.
     """
-    log.debug(f"Validating packet of size {len(packet_bytes)} bytes.")
+    if len(packet_bytes) < HEADER_SIZE:
+        log.warning(f"Packet too short: {len(packet_bytes)} bytes.")
+        return None
+
     try:
-        pkt_dict = pickle.loads(packet_bytes)
+        # 1. Split Header and Payload
+        header_bytes = packet_bytes[:HEADER_SIZE]
+        payload = packet_bytes[HEADER_SIZE:]
 
-        # Verify all required fields exist
-        if not all(key in pkt_dict for key in ["is_ack", "seq", "data", "checksum"]):
-            log.warning("Packet validation failed: Missing required fields.")
-            return None
+        # 2. Unpack Header
+        seq, pkt_type, received_checksum = struct.unpack(HEADER_FORMAT, header_bytes)
 
-        received_checksum = pkt_dict["checksum"]
+        # 3. Verify Checksum
+        # Reconstruct header with 0 checksum to verify validity
+        clean_header = struct.pack(HEADER_FORMAT, seq, pkt_type, 0)
+        calculated_checksum = calculate_checksum(clean_header + payload)
 
-        # Calculate checksum based on the same canonical representation
-        calculated_checksum = calculate_checksum(get_canonical_form(pkt_dict))
-
-        if received_checksum == calculated_checksum:
-            log.debug("Packet checksum is valid.")
-            return pkt_dict
-        else:
+        if received_checksum != calculated_checksum:
             log.warning(
-                f"Packet validation failed: Checksum mismatch. Got {received_checksum}, expected {calculated_checksum}."
+                f"Checksum mismatch! Got {received_checksum}, expected {calculated_checksum}"
             )
             return None
 
-    except (pickle.UnpicklingError, Exception):
-        log.exception("Packet validation failed with an exception.")
+        # 4. Return Dict Interface
+        return {
+            "is_ack": (pkt_type == TYPE_ACK),
+            "seq": seq,
+            "data": payload,
+            "checksum": received_checksum,
+        }
+
+    except struct.error as e:
+        log.error(f"Packet structure error: {e}")
         return None

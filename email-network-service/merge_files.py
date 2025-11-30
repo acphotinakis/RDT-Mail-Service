@@ -1,6 +1,7 @@
 import os
 from typing import List
 
+
 def merge_files(directories: List[str], output_file: str):
     """
     Merge all files from the given list of directories into one master file.
@@ -15,10 +16,7 @@ def merge_files(directories: List[str], output_file: str):
                 continue
 
             # List files
-            files = [
-                f for f in os.listdir(input_dir)
-                if os.path.isfile(os.path.join(input_dir, f))
-            ]
+            files = [f for f in os.listdir(input_dir) if os.path.isfile(os.path.join(input_dir, f))]
             files.sort()
 
             master.write(f"\n\n===== DIRECTORY: {input_dir} =====\n")
@@ -37,10 +35,5 @@ def merge_files(directories: List[str], output_file: str):
 
 
 if __name__ == "__main__":
-    dirs = [
-        "src/rdt/",
-        "src/pop3",
-        "src/server",
-        "src/smtp"
-    ]
+    dirs = ["src/rdt/", "src/pop3", "src/server", "src/smtp", "src/mailbox"]
     merge_files(dirs, output_file="master_output.txt")
