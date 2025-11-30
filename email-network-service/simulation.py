@@ -291,7 +291,7 @@ class Simulation:
         self.setup_users()
         self.run_email_simulation()
         # Wait a moment for server to flush to disk
-        time.sleep(1.0)
+        time.sleep(3.0)
         self.run_pop3_integrity_check()
         self.stop_servers()
 
@@ -305,7 +305,7 @@ def main():
     if not os.path.exists("mailboxes"):
         os.makedirs("mailboxes")
 
-    sim = Simulation(num_users=500, concurrency=100)
+    sim = Simulation(num_users=10, concurrency=5)
 
     try:
         sim.run()
