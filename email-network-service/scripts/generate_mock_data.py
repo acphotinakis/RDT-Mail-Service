@@ -58,14 +58,16 @@ def generate_password() -> str:
 
 
 def build_email(sender_user: User, recipient_user: User) -> EmailData:
+    # Generate metadata
     date = fake.date_time_between(start_date="-1y", end_date="now", tzinfo=timezone.utc)
-
     subject = fake.sentence(nb_words=6)
     body = fake.paragraph(nb_sentences=3)
 
+    # Build sender/receiver addresses
     sender_addr = f"{sender_user.username}@example.com"
     recipient_addr = f"{recipient_user.username}@example.com"
 
+    # Build email message
     msg = EmailMessage()
     msg["Subject"] = subject
     msg["From"] = sender_addr
@@ -73,6 +75,7 @@ def build_email(sender_user: User, recipient_user: User) -> EmailData:
     msg["Date"] = format_datetime(date)
     msg.set_content(body)
 
+    # Return EmailData aligned with dataclass ordering
     return EmailData(
         raw_message=msg,
         uid=str(uuid.uuid4()),
@@ -80,8 +83,8 @@ def build_email(sender_user: User, recipient_user: User) -> EmailData:
         sender=sender_addr,
         recipient=recipient_addr,
         date=msg["Date"],
-        body_text=body,
         body_html=None,
+        body_text=body,
     )
 
 

@@ -102,7 +102,6 @@ class RDTDispatcher:
         self.data_queue.put((packet, addr))
 
     # --- Methods for RDTSender ---
-
     def register_ack_waiter(self, host: str, port: int, seq: int) -> threading.Event:
         """Called by Sender BEFORE sending data."""
         key = (host, port, seq)
@@ -119,7 +118,6 @@ class RDTDispatcher:
                 del self._ack_listeners[key]
 
     # --- Methods for RDTReceiver ---
-
     def get_data_packet(self, timeout=None) -> Optional[Tuple[Dict, Tuple[str, int]]]:
         """Blocking call to get the next valid data packet."""
         try:

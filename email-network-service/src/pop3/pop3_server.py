@@ -22,7 +22,7 @@ class POP3Server:
         self.sock.bind((host, port))
 
         self.dispatcher = RDTDispatcher(self.sock)
-        self.rdt_receiver = RDTReceiver(dispatcher=self.dispatcher, yield_addr=True)
+        self.rdt_receiver = RDTReceiver(dispatcher=self.dispatcher)
 
         self._senders: Dict[Tuple[str, int], RDTSender] = {}
         self.storage = StorageManager()
