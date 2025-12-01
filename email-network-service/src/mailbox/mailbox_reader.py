@@ -120,8 +120,7 @@ class MailboxReader:
             f"--- BEGIN READ MESSAGE for user '{user.username}' " f"(filename='{filename}') ---"
         )
 
-        user_dir = os.path.join(MAILBOXES_DIR, user.username)
-        message_path = os.path.join(user_dir, filename)
+        message_path = os.path.join(user.mailbox_path, filename)
 
         self.log.debug(f"Resolved message path: {message_path}")
 
@@ -155,8 +154,7 @@ class MailboxReader:
         """
         self.log.debug(f"Looking up UID for user '{user.username}', filename='{filename}'.")
 
-        user_dir = os.path.join(MAILBOXES_DIR, user.username)
-        metadata_path = os.path.join(user_dir, "metadata.json")
+        metadata_path = os.path.join(user.mailbox_path, "metadata.json")
 
         metadata = self._load_metadata(metadata_path)
         message_meta = metadata.get("messages", {}).get(filename)
