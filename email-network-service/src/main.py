@@ -4,7 +4,7 @@ import threading
 import time
 import logging
 
-from src.config import (
+from config import (
     SMTP_SERVER_HOST,
     SMTP_SERVER_PORT,
     POP3_SERVER_HOST,
