@@ -1,7 +1,6 @@
 import os
 import json
 import threading
-import bcrypt
 from typing import Optional, Dict
 from src.config import Config
 from src.common.logger import get_class_logger
@@ -41,12 +40,12 @@ class UserManager:
     def _load_users(self):
         """Reads the users.json file and populates the in-memory cache."""
         with self._lock:
-            if not os.path.exists(self.db_file):
-                self.log.info("No user database found. Starting fresh.")
-                os.makedirs(os.path.dirname(self.db_file), exist_ok=True)
-                self.log.debug(f"Created directory {os.path.dirname(self.db_file)}")
-                self._save_users()  # Initialize empty file
-                return
+            # if not os.path.exists(self.db_file):
+            #     self.log.info("No user database found. Starting fresh.")
+            #     os.makedirs(os.path.dirname(self.db_file), exist_ok=True)
+            #     self.log.debug(f"Created directory {os.path.dirname(self.db_file)}")
+            #     self._save_users()  # Initialize empty file
+            #     return
 
             try:
                 self.log.debug(f"Loading users from {self.db_file}")

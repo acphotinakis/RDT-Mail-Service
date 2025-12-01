@@ -322,7 +322,7 @@ def parse_args():
 
 
 def main():
-    setup_logger("SIM", level="INFO")
+    setup_logger("EMAIL_NETWORK_SERVICE <--> SIMULATION", level="INFO")
 
     args = parse_args()
     Config.apply_args(args)

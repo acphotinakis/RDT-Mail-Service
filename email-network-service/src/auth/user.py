@@ -1,6 +1,6 @@
 import os
 from typing import Dict, Any
-from src.config import Config.USER_DB_FILE, Config.MAILBOXES_DIR
+from src.config import Config
 from src.common.logger import get_class_logger
 
 
