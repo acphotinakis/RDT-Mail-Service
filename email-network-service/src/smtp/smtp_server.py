@@ -396,6 +396,7 @@ class SMTPServer:
         if self._running:
             return
         self._running = True
+        self._thread_start_time = time.time()
         self._thread = threading.Thread(
             target=self._serve_loop, name="smtp-serve-loop", daemon=True
         )
@@ -416,27 +417,46 @@ class SMTPServer:
             self._thread.join(timeout=2.0)
         self.log.info("SMTP server stopped.")
 
-    def to_string(self) -> str:
+    def print_config(self) -> None:
         """
-        Returns a pretty-formatted string of core SMTPServer properties.
-        Useful for debugging, logging, or health checks.
+        Returns a pretty-formatted overview of the POP3Server's configuration
+        and runtime state. Useful for debugging, diagnostics, and health checks.
         """
+
+        thread = self._thread
+        dispatcher_thread = self.dispatcher._thread
+
         props = {
             "Host": self.host,
             "Port": self.port,
             "Running": self._running,
             "Socket Bound": f"{self.host}:{self.port}",
+            # --- Thread Details ---
+            "Thread Alive": thread.is_alive() if thread else False,
+            "Thread Name": thread.name if thread else None,
+            "Thread ID": thread.ident if thread else None,
+            "Native Thread ID": (
+                thread.native_id if thread and hasattr(thread, "native_id") else None
+            ),
+            "Thread Daemon": thread.daemon if thread else None,
+            "Thread Uptime (s)": (
+                round(time.time() - self._thread_start_time, 2)
+                if thread and hasattr(self, "_thread_start_time")
+                else None
+            ),
+            # --- Dispatcher Info ---
             "Dispatcher Thread Alive": (
-                self.dispatcher._thread.is_alive() if self.dispatcher._thread else False
+                dispatcher_thread.is_alive() if dispatcher_thread else False
             ),
             "Receiver Running": getattr(self.rdt_receiver, "_running", None),
+            # --- Storage & Users ---
             "Active Senders": len(self._senders),
             "Storage Backend": self.storage.__class__.__name__,
         }
 
-        # Compute the pretty alignment
+        # Compute alignment width
         longest_key = max(len(k) for k in props.keys())
-        lines = ["\nSMTPServer Configuration:"]
+        lines = ["\nPOP3Server Configuration:"]
         lines.append("-" * (longest_key + 30))
 
         for key, value in props.items():
@@ -444,4 +464,5 @@ class SMTPServer:
 
         lines.append("-" * (longest_key + 30))
 
-        return "\n".join(lines)
+        msg = "\n".join(lines)
+        self.log.info(msg)

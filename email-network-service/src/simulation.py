@@ -134,8 +134,8 @@ class Simulation:
 
         self.smtp_server.start()
         self.pop3_server.start()
-        self.log.info(self.smtp_server.to_string())
-        self.log.info(self.pop3_server.to_string())
+        self.smtp_server.print_config()
+        self.pop3_server.print_config()
 
         # Allow sockets to bind
         time.sleep(1.0)
@@ -322,7 +322,11 @@ def parse_args():
 
 
 def main():
-    setup_logger("EMAIL_NETWORK_SERVICE <--> SIMULATION", level="INFO")
+    setup_logger(
+        name="EMAIL_NETWORK_SERVICE <--> SIMULATION",
+        level="INFO",
+        log_file="email_network_service.log",
+    )
 
     args = parse_args()
     Config.apply_args(args)

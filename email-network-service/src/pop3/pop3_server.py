@@ -244,7 +244,7 @@ class POP3Server:
             self._thread.join(timeout=2.0)
         self.log.info("POP3 server stopped.")
 
-    def to_string(self) -> str:
+    def print_config(self) -> None:
         """
         Returns a pretty-formatted overview of the POP3Server's configuration
         and runtime state. Useful for debugging, diagnostics, and health checks.
@@ -292,4 +292,5 @@ class POP3Server:
 
         lines.append("-" * (longest_key + 30))
 
-        return "\n".join(lines)
+        msg = "\n".join(lines)
+        self.log.info(msg)
