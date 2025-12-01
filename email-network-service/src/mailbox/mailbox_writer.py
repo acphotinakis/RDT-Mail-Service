@@ -2,7 +2,7 @@
 
 from src.auth.user import User
 from src.client.frontend.models import EmailData
-from src.config import MAILBOXES_DIR, TEMP_EMAILS_DIR
+from src.config import Config
 import os
 import uuid
 import time
@@ -72,11 +72,11 @@ class MailboxWriter:
         self.log.info(f"--- BEGIN EMAIL WRITE TRANSACTION for user '{user.username}' ---")
 
         # Establish user mailbox directories
-        user_dir = os.path.join(MAILBOXES_DIR, user.username)
+        user_dir = os.path.join(Config.MAILBOXES_DIR, user.username)
         os.makedirs(user_dir, exist_ok=True)
         self.log.debug(f"Ensured mailbox directory exists: {user_dir}")
 
-        temp_user_dir = os.path.join(TEMP_EMAILS_DIR, user.username)
+        temp_user_dir = os.path.join(Config.TEMP_EMAILS_DIR, user.username)
         os.makedirs(temp_user_dir, exist_ok=True)
         self.log.debug(f"Ensured TEMP mailbox directory exists: {temp_user_dir}")
 
@@ -181,7 +181,7 @@ class MailboxWriter:
         Marks a message as deleted in the metadata.
         """
         self.log.info(f"--- BEGIN EMAIL DELETE TRANSACTION for user '{user.username}' ---")
-        metadata_path = os.path.join(MAILBOXES_DIR, user.username, "metadata.json")
+        metadata_path = os.path.join(Config.MAILBOXES_DIR, user.username, "metadata.json")
         metadata = self._load_metadata(metadata_path)
 
         if filename in metadata["messages"]:

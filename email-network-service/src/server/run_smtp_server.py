@@ -1,7 +1,6 @@
 import sys
-import threading
 import time
-from src.config import SMTP_SERVER_HOST, SMTP_SERVER_PORT
+from src.config import Config
 from smtp.smtp_server import SMTPServer
 
 
@@ -10,9 +9,9 @@ def main():
     Initializes and starts the SMTP server.
     """
     print("Starting SMTP server...")
-    server = SMTPServer(SMTP_SERVER_HOST, SMTP_SERVER_PORT)
+    server = SMTPServer(Config.SMTP_SERVER_HOST, Config.SMTP_SERVER_PORT)
     server.start()
-    print(f"SMTP Server running on {SMTP_SERVER_HOST}:{SMTP_SERVER_PORT}")
+    print(f"SMTP Server running on {Config.SMTP_SERVER_HOST}:{Config.SMTP_SERVER_PORT}")
 
     try:
         while True:

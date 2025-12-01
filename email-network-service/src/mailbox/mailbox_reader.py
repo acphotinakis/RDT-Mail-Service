@@ -5,7 +5,7 @@ import json
 from typing import Dict, Optional, Tuple, List
 
 from src.auth.user import User
-from src.config import MAILBOXES_DIR
+from src.config import Config
 from src.common.logger import get_class_logger
 
 
@@ -69,7 +69,7 @@ class MailboxReader:
         """
         self.log.info(f"--- BEGIN MAILBOX LISTING transaction for user '{user.username}' ---")
 
-        user_dir = os.path.join(MAILBOXES_DIR, user.username)
+        user_dir = os.path.join(Config.MAILBOXES_DIR, user.username)
         metadata_path = os.path.join(user_dir, "metadata.json")
 
         self.log.debug(f"Mailbox directory resolved: {user_dir}")

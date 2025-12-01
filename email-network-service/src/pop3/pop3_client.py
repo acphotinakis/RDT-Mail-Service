@@ -1,12 +1,7 @@
 import socket
 from typing import List, Tuple
 from src.common.logger import get_class_logger
-from src.config import (
-    POP3_SERVER_HOST,
-    POP3_SERVER_PORT,
-    CLIENT_IP,
-    RDT_TIMEOUT,
-)
+from src.config import Config
 from src.common.exceptions import POP3ConnectionError, POP3ProtocolError
 from src.rdt.rdt_sender import RDTSender
 from src.rdt.rdt_receiver import RDTReceiver
@@ -20,13 +15,13 @@ class POP3Client:
         self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
         # FIX: Bind to Port 0 (Ephemeral) to allow concurrent simulation threads
-        self.sock.bind((CLIENT_IP, 0))
-        self.sock.settimeout(RDT_TIMEOUT)
+        self.sock.bind((Config.CLIENT_IP, 0))
+        self.sock.settimeout(Config.RDT_TIMEOUT)
 
         self.dispatcher = RDTDispatcher(self.sock)
         self.dispatcher.start()
 
-        self.rdt_sender = RDTSender(POP3_SERVER_HOST, POP3_SERVER_PORT, self.dispatcher)
+        self.rdt_sender = RDTSender(Config.POP3_SERVER_HOST, Config.POP3_SERVER_PORT, self.dispatcher)
         self.rdt_receiver = RDTReceiver(dispatcher=self.dispatcher)
         self.receiver_gen = self.rdt_receiver.start_receiving()
 
@@ -145,8 +140,8 @@ class POP3Client:
 # from typing import List, Tuple
 # from src.common.logger import get_class_logger
 # from src.config import (
-#     POP3_SERVER_HOST,
-#     POP3_SERVER_PORT,
+#     Config.POP3_SERVER_HOST,
+#     Config.POP3_SERVER_PORT,
 #     CLIENT_IP,
 #     CLIENT_LISTENING_PORT,
 #     RDT_TIMEOUT,
@@ -168,7 +163,7 @@ class POP3Client:
 #         self.dispatcher = RDTDispatcher(self.sock)
 #         self.dispatcher.start()
 
-#         self.rdt_sender = RDTSender(POP3_SERVER_HOST, POP3_SERVER_PORT, self.dispatcher)
+#         self.rdt_sender = RDTSender(Config.POP3_SERVER_HOST, Config.POP3_SERVER_PORT, self.dispatcher)
 #         # Standardized receiver
 #         self.rdt_receiver = RDTReceiver(dispatcher=self.dispatcher)
 #         self.receiver_gen = self.rdt_receiver.start_receiving()

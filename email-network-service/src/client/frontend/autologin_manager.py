@@ -1,12 +1,12 @@
 import json
 import os
 from typing import Optional, Tuple
-import logging
+
 
 # Simple config file to store autologin credentials.
 # In a real app, this would be in a more standard user config location.
 AUTOLOGIN_FILE = ".autologin.json"
-log = logging.getLogger(__name__)
+from src.common.logger import get_class_logger
 
 
 def get_saved_credentials() -> Optional[Tuple[str, str]]:

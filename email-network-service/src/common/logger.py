@@ -7,17 +7,24 @@ from contextlib import contextmanager
 _default_logger: Optional[Logger] = None
 
 
+# ------------------------------------------------------------------------------
+# MAIN LOGGER INITIALIZATION
+# ------------------------------------------------------------------------------
 def setup_logger(name: str = "APP", level: str = "INFO", log_file: Optional[str] = None) -> Logger:
+    """
+    Initializes the root/default logger used by all class/module loggers.
+    """
     global _default_logger
 
+    # Ensure logging module is imported
     logger = logging.getLogger(name)
     logger.setLevel(level.upper())
 
-    # Custom format including class name
+    # Standard rich format for terminal
     FORMAT = "[%(name)s] - %(levelname)s - %(message)s"
 
     if not logger.handlers:
-        # Rich terminal handler
+        # Rich handler for console output
         rich_handler = RichHandler(
             rich_tracebacks=True,
             markup=True,
@@ -46,33 +53,44 @@ def setup_logger(name: str = "APP", level: str = "INFO", log_file: Optional[str]
     return logger
 
 
-# ──────────────────────────────────────────────────────────────────────────────
-# Helper to get a logger for *each class*
-# ──────────────────────────────────────────────────────────────────────────────
-
-
-def get_class_logger(obj) -> Logger:
+# ------------------------------------------------------------------------------
+# CLASS-LEVEL LOGGER
+# ------------------------------------------------------------------------------
+def get_class_logger(obj_or_name) -> Logger:
     """
-    Returns a logger named after the class of the object calling it.
-    Example result: 'SMTPClient', 'POP3Server', 'ComposeWindow'
-    """
-    logger = logging.getLogger(obj.__class__.__name__)
-    logger.setLevel(logging.DEBUG)
+    Returns a logger named after the class or provided name.
 
-    # Only attach handler once
-    if not logger.handlers and _default_logger and _default_logger.handlers:
-        for h in _default_logger.handlers:
-            logger.addHandler(h)
+    Usage:
+        self.logger = get_class_logger(self)        # for classes
+        logger = get_class_logger("RDT_PACKET")     # for modules
+    """
+    global _default_logger
+
+    # Determine logger name
+    if isinstance(obj_or_name, str):
+        name = obj_or_name
+    else:
+        name = obj_or_name.__class__.__name__
+
+    logger = logging.getLogger(name)
+
+    # Inherit handlers from default logger ONCE
+    if not logger.handlers:
+        if _default_logger:
+            for handler in _default_logger.handlers:
+                logger.addHandler(handler)
+
+    # Match levels
+    if _default_logger:
+        logger.setLevel(_default_logger.level)
 
     logger.propagate = False
     return logger
 
 
-# ──────────────────────────────────────────────────────────────────────────────
-# Convenience functions (use default logger)
-# ──────────────────────────────────────────────────────────────────────────────
-
-
+# ------------------------------------------------------------------------------
+# SIMPLE SHORTCUT LOGGING FUNCTIONS
+# ------------------------------------------------------------------------------
 def debug(msg: str):
     if _default_logger:
         _default_logger.debug(msg)
@@ -98,11 +116,9 @@ def critical(msg: str):
         _default_logger.critical(msg)
 
 
-# ──────────────────────────────────────────────────────────────────────────────
-# Context manager for logging code blocks
-# ──────────────────────────────────────────────────────────────────────────────
-
-
+# ------------------------------------------------------------------------------
+# CONTEXT MANAGER
+# ------------------------------------------------------------------------------
 @contextmanager
 def log_block(name: str):
     if not _default_logger:

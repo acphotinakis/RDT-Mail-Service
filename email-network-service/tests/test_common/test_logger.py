@@ -1,5 +1,5 @@
 import pytest
-import logging
+
 from src.common.logger import setup_logger, get_class_logger
 
 

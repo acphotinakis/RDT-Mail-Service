@@ -1,6 +1,6 @@
 import threading
 from typing import Optional, List
-import logging
+
 
 from src.client.frontend.wrappers.storage_wrapper import StorageWrapper
 from src.client.frontend.wrappers.smtp_wrapper import SMTPWrapper
@@ -9,7 +9,7 @@ from src.client.frontend.models.email_data import EmailData
 import src.client.frontend.autologin_manager as autologin_manager
 from src.common.logger import get_class_logger
 
-log = logging.getLogger(__name__)
+from src.common.logger import get_class_logger
 
 
 class ViewInterface:

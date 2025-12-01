@@ -1,6 +1,6 @@
 import os
 from typing import Dict, Any
-from src.config import USER_DB_FILE, MAILBOXES_DIR
+from src.config import Config.USER_DB_FILE, Config.MAILBOXES_DIR
 from src.common.logger import get_class_logger
 
 
@@ -19,7 +19,7 @@ class User:
         self.log = get_class_logger(self)
         self.username = username.lower()
         self.password = password
-        self.mailbox_path = os.path.join(MAILBOXES_DIR, self.username)
+        self.mailbox_path = os.path.join(Config.MAILBOXES_DIR, self.username)
 
         self.log.debug(f"User object initialized for {self.username}")
 

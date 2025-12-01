@@ -3,7 +3,7 @@ import json
 import threading
 import bcrypt
 from typing import Optional, Dict
-from src.config import USER_DB_FILE, MAILBOXES_DIR
+from src.config import Config.USER_DB_FILE, Config.MAILBOXES_DIR
 from src.common.logger import get_class_logger
 from src.auth.user import User
 
@@ -34,7 +34,7 @@ class UserManager:
         self.log = get_class_logger(self)
         # In-memory cache of User objects: {username_str: User_obj}
         self.users: Dict[str, User] = {}
-        self.db_file = USER_DB_FILE
+        self.db_file = Config.USER_DB_FILE
         self._load_users()
         self.log.info(f"UserManager initialized. Loaded {len(self.users)} users.")
 

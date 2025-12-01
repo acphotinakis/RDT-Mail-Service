@@ -1,10 +1,9 @@
 # src/rdt/rdt_packet.py
 import struct
-import logging
 import zlib
-from src.rdt.checksum import calculate_checksum
+from src.common.logger import get_class_logger
 
-log = logging.getLogger(__name__)
+log = get_class_logger("RDT_PACKET")
 
 # --- Packet Constants ---
 TYPE_DATA = 0
@@ -12,11 +11,15 @@ TYPE_ACK = 1
 HEADER_FORMAT = "!BBI"  # Seq (1B), Type (1B), Checksum (4B)
 HEADER_SIZE = struct.calcsize(HEADER_FORMAT)
 
-
-# def calculate_checksum(data: bytes) -> int:
-#     """Computes CRC32 checksum."""
-#     return zlib.crc32(data) & 0xFFFFFFFF
-
+def calculate_checksum(data: bytes) -> int:
+    """
+    Computes the CRC32 checksum for the given data.
+    Ensures the result is an unsigned 32-bit integer (0 to 2^32-1).
+    """
+    log.debug(f"Calculating checksum for data of length {len(data)} bytes.")
+    checksum = zlib.crc32(data) & 0xFFFFFFFF
+    log.debug(f"Checksum calculated: {checksum}")
+    return checksum
 
 def make_packet(seq_num: int, is_ack: bool, payload: bytes) -> bytes:
     """

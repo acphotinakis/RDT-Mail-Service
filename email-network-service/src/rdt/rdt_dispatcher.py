@@ -1,12 +1,11 @@
 import threading
 import queue
 import socket
-import logging
+
 from typing import Dict, Tuple, Optional
 from src.rdt.rdt_packet import unpack_and_validate
-from src.rdt.rdt_config import RDT_RECV_BUFSIZE
-
-logger = logging.getLogger(__name__)
+from src.config import Config
+from src.common.logger import get_class_logger
 
 
 class RDTDispatcher:
@@ -20,6 +19,7 @@ class RDTDispatcher:
     """
 
     def __init__(self, sock: socket.socket):
+        self.logger = get_class_logger(self)
         self.sock = sock
         self.sock.settimeout(1.0)
         self.running = False
@@ -44,7 +44,7 @@ class RDTDispatcher:
             target=self._listen_loop, name="RDT-Dispatcher", daemon=True
         )
         self._thread.start()
-        logger.info("RDT Dispatcher thread started.")
+        self.logger.info("RDT Dispatcher thread started.")
 
     def stop(self):
         """Stops the background thread."""
@@ -52,7 +52,7 @@ class RDTDispatcher:
         # We do not close the socket here, as it might be owned by the application
         if self._thread:
             self._thread.join(timeout=1.0)
-        logger.info("RDT Dispatcher stopped.")
+        self.logger.info("RDT Dispatcher stopped.")
 
     def _listen_loop(self):
         """
@@ -61,7 +61,7 @@ class RDTDispatcher:
         while self.running:
             try:
                 # 1. Block waiting for any packet
-                raw_bytes, addr = self.sock.recvfrom(RDT_RECV_BUFSIZE)
+                raw_bytes, addr = self.sock.recvfrom(Config.RDT_RECV_BUFSIZE)
 
                 # 2. Deserialize and Validate
                 packet = unpack_and_validate(raw_bytes)
@@ -80,10 +80,10 @@ class RDTDispatcher:
                 continue  # Normal if socket has a timeout set
             except OSError:
                 if self.running:
-                    logger.error("Socket closed unexpectedly.")
+                    self.logger.error("Socket closed unexpectedly.")
                 break
             except Exception as e:
-                logger.exception(f"Dispatcher error: {e}")
+                self.logger.exception(f"Dispatcher error: {e}")
 
     def _handle_ack(self, packet, addr):
         """Fires the event if a Sender is waiting for this specific ACK."""

@@ -1,5 +1,5 @@
 import sys
-import logging
+
 from PySide6.QtWidgets import QApplication, QMessageBox
 
 from src.client.frontend.gui_qt.auth_views_qt import LoginDialog, SignupDialog
@@ -7,9 +7,10 @@ from src.client.frontend.gui_qt.main_window_qt import MainWindowQt
 from src.client.frontend.gui_qt.welcome_view_qt import WelcomeDialog
 from src.client.frontend.controllers.auth_controller import AuthController
 import src.client.frontend.autologin_manager as autologin_manager
-from src.common.logger import setup_logger
+from src.common.logger import setup_logger, get_class_logger
 
-log = logging.getLogger(__name__)
+
+log = get_class_logger("RUN_FRONTEND")
 
 
 def run_signup_flow(auth_controller: AuthController):
@@ -126,7 +127,9 @@ def run_frontend():
 
     # 3. Start the main application with the authenticated user
     if authenticated_username and authenticated_password:
-        log.info(f"Authentication complete. Starting main window for user '{authenticated_username}'.")
+        log.info(
+            f"Authentication complete. Starting main window for user '{authenticated_username}'."
+        )
         main_window = MainWindowQt(authenticated_username, authenticated_password)
         main_window.show()
 

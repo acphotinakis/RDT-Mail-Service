@@ -1,8 +1,8 @@
 import socket
 import threading
 from src.common.logger import get_class_logger
-from .rdt_config import RDT_TIMEOUT
-from .rdt_packet import make_data_packet
+from src.rdt.rdt_packet import make_data_packet
+from src.config import Config
 
 # Import the Dispatcher type for type hinting (avoid circular import at runtime if needed)
 from typing import TYPE_CHECKING
@@ -50,7 +50,7 @@ class RDTSender:
                 self.log.debug(f"Sender: Sending SEQ {seq_to_use} (Attempt {attempts + 1})")
                 self.dispatcher.sock.sendto(sndpkt, self.dest_addr)
 
-                if ack_event.wait(timeout=RDT_TIMEOUT):
+                if ack_event.wait(timeout=Config.RDT_TIMEOUT):
                     self.log.debug(f"Sender: ACK {seq_to_use} received.")
                     # Only toggle state after success logic is confirmed
                     self.curr_seq = 1 - self.curr_seq

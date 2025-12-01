@@ -11,13 +11,7 @@ the email data and closing the connection.
 import socket
 from typing import Optional, Tuple
 from src.common.logger import get_class_logger
-from src.config import (
-    SMTP_SERVER_HOST,
-    SMTP_SERVER_PORT,
-    CLIENT_IP,
-    RDT_TIMEOUT,
-)
-from src.rdt.rdt_config import MAX_PAYLOAD_SIZE
+from src.config import Config
 from src.common.exceptions import SMTPProtocolError, SMTPConnectionError
 from src.rdt.rdt_sender import RDTSender
 from src.rdt.rdt_receiver import RDTReceiver
@@ -70,14 +64,16 @@ class SMTPClient:
 
         # Use Port 0 (Ephemeral) so the OS assigns a random available port.
         # This allows multiple SMTPClient instances to run in parallel threads.
-        self.sock.bind((CLIENT_IP, 0))
-        self.sock.settimeout(RDT_TIMEOUT)
+        self.sock.bind((Config.CLIENT_IP, 0))
+        self.sock.settimeout(Config.RDT_TIMEOUT)
 
         # 2. RDT Setup
         self.dispatcher = RDTDispatcher(self.sock)
         self.dispatcher.start()
 
-        self.rdt_sender = RDTSender(SMTP_SERVER_HOST, SMTP_SERVER_PORT, self.dispatcher)
+        self.rdt_sender = RDTSender(
+            Config.SMTP_SERVER_HOST, Config.SMTP_SERVER_PORT, self.dispatcher
+        )
         self.rdt_receiver = RDTReceiver(dispatcher=self.dispatcher)
         self.receiver_gen = self.rdt_receiver.start_receiving()
 
@@ -200,7 +196,7 @@ class SMTPClient:
         sent = 0
 
         while sent < total_len:
-            chunk = payload_bytes[sent : sent + MAX_PAYLOAD_SIZE]
+            chunk = payload_bytes[sent : sent + Config.MAX_PAYLOAD_SIZE]
             self.rdt_sender.send(chunk)
             sent += len(chunk)
 
@@ -271,7 +267,7 @@ class SMTPClient:
 # from src.common.logger import get_class_logger
 # from config import (
 #     SMTP_SERVER_HOST,
-#     SMTP_SERVER_PORT,
+#     Config.SMTP_SERVER_PORT,
 #     CLIENT_IP,
 #     RDT_TIMEOUT,
 # )
@@ -338,7 +334,7 @@ class SMTPClient:
 #         self.dispatcher = RDTDispatcher(self.sock)
 #         self.dispatcher.start()
 
-#         self.rdt_sender = RDTSender(SMTP_SERVER_HOST, SMTP_SERVER_PORT, self.dispatcher)
+#         self.rdt_sender = RDTSender(SMTP_SERVER_HOST, Config.SMTP_SERVER_PORT, self.dispatcher)
 #         self.rdt_receiver = RDTReceiver(dispatcher=self.dispatcher)
 #         self.receiver_gen = self.rdt_receiver.start_receiving()
 
@@ -561,7 +557,7 @@ class SMTPClient:
 # # from src.common.logger import get_class_logger
 # # from config import (
 # #     SMTP_SERVER_HOST,
-# #     SMTP_SERVER_PORT,
+# #     Config.SMTP_SERVER_PORT,
 # #     CLIENT_IP,
 # #     CLIENT_LISTENING_PORT,
 # #     RDT_TIMEOUT,
@@ -593,7 +589,7 @@ class SMTPClient:
 # #         self.dispatcher = RDTDispatcher(self.sock)
 # #         self.dispatcher.start()
 
-# #         self.rdt_sender = RDTSender(SMTP_SERVER_HOST, SMTP_SERVER_PORT, self.dispatcher)
+# #         self.rdt_sender = RDTSender(SMTP_SERVER_HOST, Config.SMTP_SERVER_PORT, self.dispatcher)
 
 # #         # REMOVED confusing yield_addr=False flag.
 # #         self.rdt_receiver = RDTReceiver(dispatcher=self.dispatcher)

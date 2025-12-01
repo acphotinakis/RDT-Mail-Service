@@ -1,7 +1,7 @@
 import re
-import logging
 
-log = logging.getLogger(__name__)
+
+from src.common.logger import get_class_logger
 
 
 def render_html_to_text(html: str) -> str:
