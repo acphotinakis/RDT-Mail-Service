@@ -241,3 +241,37 @@ class POP3Server:
         if self._thread:
             self._thread.join(timeout=2.0)
         self.log.info("POP3 server stopped.")
+
+
+def to_string(self) -> str:
+    """
+    Returns a pretty-formatted overview of the POP3Server's configuration
+    and runtime state. Useful for debugging, diagnostics, and health checks.
+    """
+
+    props = {
+        "Host": self.host,
+        "Port": self.port,
+        "Running": self._running,
+        "Socket Bound": f"{self.host}:{self.port}",
+        "Dispatcher Thread Alive": (
+            self.dispatcher._thread.is_alive() if self.dispatcher._thread else False
+        ),
+        "Receiver Running": getattr(self.rdt_receiver, "_running", None),
+        "Active Senders": len(self._senders),
+        "Storage Backend": self.storage.__class__.__name__,
+        "User Manager": self.user_manager.__class__.__name__,
+        "Thread Alive": self._thread.is_alive() if self._thread else False,
+    }
+
+    # Compute alignment width
+    longest_key = max(len(k) for k in props.keys())
+    lines = ["\nPOP3Server Configuration:"]
+    lines.append("-" * (longest_key + 30))
+
+    for key, value in props.items():
+        lines.append(f"{key.ljust(longest_key)} : {value}")
+
+    lines.append("-" * (longest_key + 30))
+
+    return "\n".join(lines)

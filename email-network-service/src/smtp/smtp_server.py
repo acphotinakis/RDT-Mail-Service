@@ -415,3 +415,33 @@ class SMTPServer:
         if self._thread:
             self._thread.join(timeout=2.0)
         self.log.info("SMTP server stopped.")
+
+    def to_string(self) -> str:
+        """
+        Returns a pretty-formatted string of core SMTPServer properties.
+        Useful for debugging, logging, or health checks.
+        """
+        props = {
+            "Host": self.host,
+            "Port": self.port,
+            "Running": self._running,
+            "Socket Bound": f"{self.host}:{self.port}",
+            "Dispatcher Thread Alive": (
+                self.dispatcher._thread.is_alive() if self.dispatcher._thread else False
+            ),
+            "Receiver Running": getattr(self.rdt_receiver, "_running", None),
+            "Active Senders": len(self._senders),
+            "Storage Backend": self.storage.__class__.__name__,
+        }
+
+        # Compute the pretty alignment
+        longest_key = max(len(k) for k in props.keys())
+        lines = ["\nSMTPServer Configuration:"]
+        lines.append("-" * (longest_key + 30))
+
+        for key, value in props.items():
+            lines.append(f"{key.ljust(longest_key)} : {value}")
+
+        lines.append("-" * (longest_key + 30))
+
+        return "\n".join(lines)

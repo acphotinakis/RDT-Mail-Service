@@ -127,15 +127,11 @@ class Simulation:
     def start_servers(self):
         self.log.info("=== PHASE 1: STARTING INFRASTRUCTURE ===")
 
-        self.log.info("Starting SMTP server...")
-
         self.smtp_server = SMTPServer(Config.SMTP_SERVER_HOST, Config.SMTP_SERVER_PORT)
         self.pop3_server = POP3Server(Config.POP3_SERVER_HOST, Config.POP3_SERVER_PORT)
 
         self.smtp_server.start()
         self.pop3_server.start()
-        self.log.info(self.smtp_server.to_string())
-        self.log.info(self.pop3_server.to_string())
 
         # Allow sockets to bind
         time.sleep(1.0)

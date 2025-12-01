@@ -19,7 +19,7 @@ from src.auth.user_manager import UserManager
 from src.client.frontend.models.email_data import EmailData
 from src.mailbox.mailbox_writer import MailboxWriter
 from src.auth.user import User
-from src.config import MAILBOXES_DIR, TEMP_EMAILS_DIR, USER_DB_FILE
+from src.config import Config
 
 fake = Faker()
 TOTAL_USERS = 50
@@ -31,7 +31,7 @@ EMAILS_PER_USER = 10  # each user "sends" 10 messages, but delivered to random o
 # -----------------------------------------------------------------------------#
 def ensure_directories():
     """Clean and recreate mailbox + temp directories."""
-    for path in (MAILBOXES_DIR, TEMP_EMAILS_DIR):
+    for path in (Config.MAILBOXES_DIR, Config.TEMP_EMAILS_DIR):
         if os.path.exists(path):
             shutil.rmtree(path)
         os.makedirs(path, exist_ok=True)
@@ -39,10 +39,10 @@ def ensure_directories():
 
 def ensure_users_json():
     """Reset users.json to { 'users': [] }."""
-    users_dir = os.path.dirname(USER_DB_FILE)
+    users_dir = os.path.dirname(Config.USER_DB_FILE)
     os.makedirs(users_dir, exist_ok=True)
 
-    with open(USER_DB_FILE, "w", encoding="utf-8") as f:
+    with open(Config.USER_DB_FILE, "w", encoding="utf-8") as f:
         json.dump({"users": []}, f, indent=2)
 
 
@@ -143,8 +143,8 @@ def main():
     # -------------------------------------------------------------------------
     print(f"Users created: {created_users}")
     print(f"Emails written: {created_messages}")
-    print(f"Mailboxes dir: {MAILBOXES_DIR}")
-    print(f"Users DB file: {USER_DB_FILE}")
+    print(f"Mailboxes dir: {Config.MAILBOXES_DIR}")
+    print(f"Users DB file: {Config.USER_DB_FILE}")
 
     print("\nGenerated usernames + passwords:\n")
     for username, password in user_passwords:
