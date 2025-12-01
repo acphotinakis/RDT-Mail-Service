@@ -116,8 +116,22 @@ class POP3Server:
     def _cmd_PASS(self, addr, session, args):
         if session["state"] != "AUTHORIZATION" or not session["user"]:
             return self._send_reply(addr, "-ERR Command not allowed here")
-        session["state"] = "TRANSACTION"
-        self._send_reply(addr, "+OK Mailbox open")
+
+        if not args:
+            return self._send_reply(addr, "-ERR Missing password")
+
+        password = args[0]
+        username = session["user"]
+
+        # Verify credentials using UserManager
+        user = self.user_manager.authenticate(username, password)
+
+        if user:
+            session["state"] = "TRANSACTION"
+            self._send_reply(addr, "+OK Mailbox open")
+        else:
+            session["user"] = None  # Reset user on failure to force re-auth
+            self._send_reply(addr, "-ERR Invalid credentials")
 
     def _cmd_STAT(self, addr, session, args):
         if session["state"] != "TRANSACTION":

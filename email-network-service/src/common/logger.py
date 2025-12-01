@@ -7,19 +7,17 @@ from contextlib import contextmanager
 _default_logger: Optional[Logger] = None
 
 
-def setup_logger(
-    name: str = "APP", level: str = "INFO", log_file: Optional[str] = None
-) -> Logger:
-    """
-    Initializes the default application logger.
-    """
+def setup_logger(name: str = "APP", level: str = "INFO", log_file: Optional[str] = None) -> Logger:
     global _default_logger
 
     logger = logging.getLogger(name)
     logger.setLevel(level.upper())
 
+    # Custom format including class name
+    FORMAT = "[%(name)s] - %(levelname)s - %(message)s"
+
     if not logger.handlers:
-        # Rich terminal output
+        # Rich terminal handler
         rich_handler = RichHandler(
             rich_tracebacks=True,
             markup=True,
@@ -28,6 +26,7 @@ def setup_logger(
             show_path=False,
         )
         rich_handler.setLevel(level.upper())
+        rich_handler.setFormatter(logging.Formatter(FORMAT))
         logger.addHandler(rich_handler)
 
         # Optional file logging

@@ -3,7 +3,8 @@ import threading
 from enum import Enum, auto
 from typing import Optional, Tuple, Dict, Any
 import socket
-
+import time
+from concurrent.futures import ThreadPoolExecutor
 from email.parser import BytesParser
 from email.policy import default as email_policy
 
@@ -14,6 +15,7 @@ from src.rdt.rdt_dispatcher import RDTDispatcher
 from src.mailbox.storage_manager import StorageManager
 from src.auth.user import User
 from src.client.frontend.models import EmailData
+from src.auth.user_manager import UserManager
 
 SMTP_EOL = b"\r\n"
 SMTP_TERMINATOR = b"\r\n.\r\n"
@@ -88,41 +90,151 @@ class SMTPServer:
             "line_buffer": bytearray(),
         }
 
+    # def _serve_loop(self):
+    #     self.log.info("SMTP serve loop running...")
+
+    #     self.dispatcher.start()
+
+    #     sessions: Dict[Tuple[str, int], Dict] = {}
+    #     last_activity: Dict[Tuple[str, int], float] = {}
+    #     SESSION_TIMEOUT = 300  # 5 minutes
+
+    #     for packet in self.rdt_receiver.start_receiving():
+
+    #         if not self._running:
+    #             break
+
+    #         try:
+    #             data, addr = packet
+    #         except Exception:
+    #             self.log.error("Invalid packet received (missing sender address).")
+    #             continue
+
+    #         self.log.debug(f"Received {len(data)} bytes from {addr}")
+
+    #         if addr not in sessions:
+    #             sessions[addr] = self._create_session()
+    #             self._send_reply(addr, "220 Welcome Simple SMTP Server")
+    #             self.log.info(f"New SMTP session created for client {addr}")
+
+    #         session = sessions[addr]
+
+    #         if session["state"] == SMTPState.READING_DATA_STREAM:
+    #             self._handle_data_stream(addr, session, data)
+    #             continue
+
+    #         self._handle_command_stream(addr, session, data, sessions)
+
+    #     self._cleanup_senders()
+    #     self.log.info("SMTP serve loop fully terminated.")
+
+    def _cleanup_session(self, addr: Tuple[str, int], sessions: Dict, last_activity: Dict) -> None:
+        """
+        Removes a client session and cleans up associated resources.
+
+        This method is called when a client sends QUIT or when a session times out.
+        It ensures memory is freed and the RDT layer is reset for that address.
+        """
+        if addr in sessions:
+            self.log.info(f"Cleaning up session for {addr}")
+            del sessions[addr]
+
+        if addr in last_activity:
+            del last_activity[addr]
+
+        # Clean up the RDT sender associated with this client
+        if addr in self._senders:
+            del self._senders[addr]
+
+        # Critical: Reset RDT receiver state so a future reconnect
+        # (starting with Seq 0) isn't mistaken for a duplicate.
+        self.rdt_receiver.reset_state(addr)
+
     def _serve_loop(self):
+        """
+        The main server loop that listens for and processes client packets.
+
+        This implementation uses a ThreadPoolExecutor to handle commands concurrently,
+        preventing disk I/O (like saving emails) from blocking the main network loop.
+        It also implements a 'reaper' strategy to clean up inactive sessions.
+        """
         self.log.info("SMTP serve loop running...")
 
         self.dispatcher.start()
 
+        # Local state for the loop
         sessions: Dict[Tuple[str, int], Dict] = {}
+        last_activity: Dict[Tuple[str, int], float] = {}
 
-        for packet in self.rdt_receiver.start_receiving():
+        # Configuration
+        SESSION_TIMEOUT = 300  # 5 minutes
+        MAX_WORKERS = 10  # Max concurrent commands
 
-            if not self._running:
-                break
+        with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
+            # Continuously fetch packets from the RDT Receiver
+            for packet in self.rdt_receiver.start_receiving():
 
-            try:
-                data, addr = packet
-            except Exception:
-                self.log.error("Invalid packet received (missing sender address).")
-                continue
+                if not self._running:
+                    break
 
-            self.log.debug(f"Received {len(data)} bytes from {addr}")
+                try:
+                    data, addr = packet
+                except Exception:
+                    self.log.error("Invalid packet received (missing sender address).")
+                    continue
 
-            if addr not in sessions:
-                sessions[addr] = self._create_session()
-                self._send_reply(addr, "220 Welcome Simple SMTP Server")
-                self.log.info(f"New SMTP session created for client {addr}")
+                # 1. Update Session Activity
+                last_activity[addr] = time.time()
 
-            session = sessions[addr]
+                # 2. Session Timeout Reaper
+                # Check for stale sessions periodically
+                now = time.time()
+                # Identify sessions inactive for > SESSION_TIMEOUT
+                # Note: creating a list to avoid changing dict size during iteration
+                stale_addrs = [
+                    a for a, last_ts in last_activity.items() if now - last_ts > SESSION_TIMEOUT
+                ]
 
-            if session["state"] == SMTPState.READING_DATA_STREAM:
-                self._handle_data_stream(addr, session, data)
-                continue
+                for stale in stale_addrs:
+                    self.log.warning(f"Session timed out for client {stale}")
+                    self._cleanup_session(stale, sessions, last_activity)
 
-            self._handle_command_stream(addr, session, data, sessions)
+                # 3. Session Initialization
+                if addr not in sessions:
+                    sessions[addr] = self._create_session()
+                    self._send_reply(addr, "220 Welcome Simple SMTP Server")
+                    self.log.info(f"New SMTP session created for client {addr}")
+
+                # 4. Dispatch Processing to Worker Thread
+                # We submit the work to the pool so the main loop can immediately
+                # fetch the next packet from other clients.
+                executor.submit(self._process_packet, addr, data, sessions)
 
         self._cleanup_senders()
         self.log.info("SMTP serve loop fully terminated.")
+
+    def _process_packet(self, addr, data, sessions):
+        """
+        Helper method to process a packet within a worker thread.
+        This encapsulates the logic previously inside the main loop.
+        """
+        # Guard against session deletion (race condition with reaper)
+        if addr not in sessions:
+            return
+
+        session = sessions[addr]
+
+        try:
+            self.log.debug(f"Received {len(data)} bytes from {addr}")
+
+            if session["state"] == SMTPState.READING_DATA_STREAM:
+                self._handle_data_stream(addr, session, data)
+            else:
+                self._handle_command_stream(addr, session, data, sessions)
+
+        except Exception as e:
+            self.log.exception(f"Error processing packet for {addr}: {e}")
+            self._send_reply(addr, "500 Internal Server Error")
 
     def _handle_data_stream(self, addr, session, data):
         session["data_buffer"].extend(data)
@@ -157,7 +269,13 @@ class SMTPServer:
 
             rcpt_addr = recipients[0]
             username = rcpt_addr.split("@")[0]
-            user = User(username)
+            user_manager = UserManager()
+            user = user_manager.get_user(username)
+
+            if not user:
+                self.log.warning(f"Rejected mail for unknown user: {username}")
+                self._send_reply(addr, "550 No such user")
+                return
 
             email_data = EmailData(
                 raw_message=msg_obj,

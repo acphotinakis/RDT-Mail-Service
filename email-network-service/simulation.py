@@ -4,6 +4,7 @@
 ===============================================================
 """
 
+import sys
 import random
 import time
 import sys
@@ -248,7 +249,6 @@ class Simulation:
             self.log.info(f"[POP3] Checking mailbox of {user.username}")
 
             client = POP3Client()
-            # FIX: Pass credentials to the helper method
             raw_messages = client.get_all_messages(user.username, "password")
 
             # Parse subjects from raw email strings
@@ -287,9 +287,10 @@ class Simulation:
         self.log.info("SMTP concurrency simulation finished.")
 
     def run(self):
-        self.start_servers()
         self.setup_users()
+        self.start_servers()
         self.run_email_simulation()
+        # sys.exit(0)
         # Wait a moment for server to flush to disk
         time.sleep(3.0)
         self.run_pop3_integrity_check()

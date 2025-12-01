@@ -21,6 +21,7 @@ class RDTDispatcher:
 
     def __init__(self, sock: socket.socket):
         self.sock = sock
+        self.sock.settimeout(1.0)
         self.running = False
         self._thread: Optional[threading.Thread] = None
 
@@ -80,7 +81,6 @@ class RDTDispatcher:
             except OSError:
                 if self.running:
                     logger.error("Socket closed unexpectedly.")
-                    self.running = False
                 break
             except Exception as e:
                 logger.exception(f"Dispatcher error: {e}")

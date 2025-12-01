@@ -39,29 +39,30 @@ class RDTSender:
         attempts = 0
 
         while attempts < max_retries:
+            seq_to_use = self.curr_seq
+
             # 1. Register intent to wait for ACK *before* sending to avoid race condition
             ack_event = self.dispatcher.register_ack_waiter(
-                self.dest_addr[0], self.dest_addr[1], self.curr_seq
+                self.dest_addr[0], self.dest_addr[1], seq_to_use
             )
 
             try:
-                # 2. Send the packet
-                self.log.debug(f"Sender: Sending SEQ {self.curr_seq} (Attempt {attempts + 1})")
+                self.log.debug(f"Sender: Sending SEQ {seq_to_use} (Attempt {attempts + 1})")
                 self.dispatcher.sock.sendto(sndpkt, self.dest_addr)
 
-                # 3. Wait for the Dispatcher to signal that the ACK arrived
                 if ack_event.wait(timeout=RDT_TIMEOUT):
-                    self.log.debug(f"Sender: ACK {self.curr_seq} received.")
+                    self.log.debug(f"Sender: ACK {seq_to_use} received.")
+                    # Only toggle state after success logic is confirmed
                     self.curr_seq = 1 - self.curr_seq
-                    return True  # Success
+                    return True
                 else:
-                    self.log.info(f"Sender: Timeout waiting for ACK {self.curr_seq}.")
+                    self.log.info(f"Sender: Timeout waiting for ACK {seq_to_use}.")
                     attempts += 1
 
             finally:
-                # Clean up the listener from the dispatcher
+                # Unregister the specific sequence we waited for
                 self.dispatcher.unregister_ack_waiter(
-                    self.dest_addr[0], self.dest_addr[1], self.curr_seq
+                    self.dest_addr[0], self.dest_addr[1], seq_to_use
                 )
 
         self.log.error(f"Sender: Max retries ({max_retries}) reached. Connection lost.")
