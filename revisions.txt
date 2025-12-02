@@ -45,3 +45,435 @@ Author: Caleb Talbott <90918332+cjt7922@users.noreply.github.com>
 Date:   Wed Nov 19 21:25:45 2025 -0500
 
     Initial commit
+commit 9735b44f140fdae09334398794995c48e765e3e7
+Author: Andrew Photinakis <andrewcphotinakis@gmail.com>
+Date:   Tue Dec 2 00:57:32 2025 -0500
+
+    adding final report
+
+commit 954f71f50ecfff4adc637d30d9a34bb1dfb56649
+Author: Andrew Photinakis <andrewcphotinakis@gmail.com>
+Date:   Tue Dec 2 00:56:10 2025 -0500
+
+    adding mermaid diagrams
+
+commit 148c2b3947487612d8c356055a166b863f2a21ec
+Author: Andrew Photinakis <andrewcphotinakis@gmail.com>
+Date:   Tue Dec 2 00:46:29 2025 -0500
+
+    updated docuemntation
+
+commit 10ea941a624db49b863230a19b33770c29e983cb
+Author: Andrew Photinakis <andrewcphotinakis@gmail.com>
+Date:   Tue Dec 2 00:38:35 2025 -0500
+
+    adding readme
+
+commit 46f95b2fdb502b370146d92ee4af7c192a42e20b
+Author: Andrew Photinakis <andrewcphotinakis@gmail.com>
+Date:   Tue Dec 2 00:31:49 2025 -0500
+
+    adding docs
+
+commit 0605ce2469e2400225ad0bc0b3450474841ca621
+Author: Andrew Photinakis <andrewcphotinakis@gmail.com>
+Date:   Tue Dec 2 00:28:23 2025 -0500
+
+    updating with final code
+
+commit 671c15d61759c9f385a4e317e6019d78afcd05ca
+Author: Andrew Photinakis <andrewcphotinakis@gmail.com>
+Date:   Tue Dec 2 00:06:26 2025 -0500
+
+    final changes before documenting
+
+commit a5fb2e53508d546a84152e3282f53c8cfdf996bd
+Author: Andrew Photinakis <andrewcphotinakis@gmail.com>
+Date:   Mon Dec 1 23:56:29 2025 -0500
+
+    removed unneeded files for submission
+
+commit bd33657319a892a72213650374bd0e7c1c81113f
+Author: Andrew Photinakis <andrewcphotinakis@gmail.com>
+Date:   Mon Dec 1 21:52:04 2025 -0500
+
+    added log messages for detailed and simple
+
+commit f68340434d059d3f449fb7e7605313de394d5446
+Author: Andrew Photinakis <andrewcphotinakis@gmail.com>
+Date:   Mon Dec 1 21:00:20 2025 -0500
+
+    adding log output
+
+commit 40254c36cc2c4c287c844a55c1e5f5e6106c8ef8
+Author: Andrew Photinakis <andrewcphotinakis@gmail.com>
+Date:   Mon Dec 1 20:52:22 2025 -0500
+
+    changing simulation args
+
+commit 1734b265ccdab8444735144ca6d058cef86801f6
+Author: Andrew Photinakis <andrewcphotinakis@gmail.com>
+Date:   Mon Dec 1 20:17:51 2025 -0500
+
+    updating messages
+
+commit 85f619aa0479939341845e3271cf035ecd6b1346
+Author: Andrew Photinakis <andrewcphotinakis@gmail.com>
+Date:   Mon Dec 1 19:09:47 2025 -0500
+
+    fixing strucvture of prints
+
+commit 4b1269bed6205f40a721c2f510abb539febafeb9
+Author: Andrew Photinakis <andrewcphotinakis@gmail.com>
+Date:   Mon Dec 1 18:49:07 2025 -0500
+
+    added to strings
+
+commit c3c5de7fa6e61c25b93e4cc4fa43754527b720f3
+Author: Andrew Photinakis <andrewcphotinakis@gmail.com>
+Date:   Mon Dec 1 18:39:38 2025 -0500
+
+    adding to string methods
+
+commit 0341ce2c25e5b4b64ec806d88736cab3c4f413c6
+Author: Andrew Photinakis <andrewcphotinakis@gmail.com>
+Date:   Mon Dec 1 18:30:38 2025 -0500
+
+    adding to string functions
+
+commit dc725f23e74c540c3afd62d125afd4d48c855897
+Author: Andrew Photinakis <andrewcphotinakis@gmail.com>
+Date:   Mon Dec 1 18:20:22 2025 -0500
+
+    fixing logger
+
+commit 1767845b38a3ca46984b227000e8d8351c552e59
+Author: Andrew Photinakis <andrewcphotinakis@gmail.com>
+Date:   Mon Dec 1 17:38:12 2025 -0500
+
+    cleaing up
+
+commit 9a5126ea76495c7a2a88c9216c2b41d110cdbfc6
+Author: Andrew Photinakis <andrewcphotinakis@gmail.com>
+Date:   Mon Dec 1 17:14:40 2025 -0500
+
+    adding mmd diagrams
+
+commit 7978df7b86c3a7addca74aa5e5a76b953db86567
+Author: Andrew Photinakis <andrewcphotinakis@gmail.com>
+Date:   Mon Dec 1 17:14:17 2025 -0500
+
+    removed old sphinx docs and added new mermaid diagrams
+
+commit fb4d0be30847c11e5ac0b32f7909b925bbc1a12c
+Author: Andrew Photinakis <andrewcphotinakis@gmail.com>
+Date:   Mon Dec 1 15:34:49 2025 -0500
+
+    updating mailbox reader
+
+commit c76ba37db1405143b901e6184dbfe0e62a43a0c6
+Author: Andrew Photinakis <andrewcphotinakis@gmail.com>
+Date:   Mon Dec 1 14:41:08 2025 -0500
+
+    funding fixes
+
+commit 2d2fe4cb93511af9ab8491ae2f8450705fd1aff7
+Author: Andrew Photinakis <andrewcphotinakis@gmail.com>
+Date:   Sat Nov 29 21:36:11 2025 -0500
+
+    fixed simulation issue
+
+commit da3f0a9a7ef77da4c23d256cd66dc792eb8ae2a3
+Author: Andrew Photinakis <andrewcphotinakis@gmail.com>
+Date:   Sat Nov 29 21:28:40 2025 -0500
+
+    adding sim to sim
+
+commit 9167ca6adeef54b3c47fbc37971764d3305a65c6
+Author: Andrew Photinakis <andrewcphotinakis@gmail.com>
+Date:   Sat Nov 29 21:10:06 2025 -0500
+
+    fianlly figured out that stupid bug (i still dont understands whats wrong)
+
+commit 5e84aa1b3b2cbf4940ec52b46be3181e63f14ddc
+Author: Andrew Photinakis <andrewcphotinakis@gmail.com>
+Date:   Sat Nov 29 20:49:27 2025 -0500
+
+    figuring out multi users
+
+commit 80ccd99efd1cd62a14fe8b87bfd3795ce4cdd24e
+Author: Andrew Photinakis <andrewcphotinakis@gmail.com>
+Date:   Sat Nov 29 18:36:28 2025 -0500
+
+    saving
+
+commit 6b32fabd2473dac314568fde66f9e3573877007d
+Author: Andrew Photinakis <andrewcphotinakis@gmail.com>
+Date:   Sat Nov 29 18:13:55 2025 -0500
+
+    updating issue with stalling bc of ack
+
+commit 4d399a3f34a267df0f9f6fe5cb1b1bc102f380f0
+Author: Andrew Photinakis <andrewcphotinakis@gmail.com>
+Date:   Sat Nov 29 17:41:44 2025 -0500
+
+    removing unneeded filess
+
+commit 953e87f970ee294ad9fd689a652ab51ad8f1719c
+Author: Andrew Photinakis <andrewcphotinakis@gmail.com>
+Date:   Sat Nov 29 16:34:19 2025 -0500
+
+    fixing UI
+
+commit f05aabc7ca785dd314ab875d23d97be3f853d436
+Author: Andrew Photinakis <andrewcphotinakis@gmail.com>
+Date:   Sat Nov 29 15:54:09 2025 -0500
+
+    updating code with pyside issues
+
+commit 922896b523ca19b30d2c22bd4459ed87edcf50b6
+Author: Andrew Photinakis <andrewcphotinakis@gmail.com>
+Date:   Sat Nov 29 13:40:40 2025 -0500
+
+    adding scripts for generating mock data and emails and accounts
+
+commit 98e3e47e5ffce7a310331cd5a6db8defe41e54cb
+Author: Andrew Photinakis <andrewcphotinakis@gmail.com>
+Date:   Sat Nov 29 12:06:17 2025 -0500
+
+    Restore gui_qt directory
+
+commit 9b58bbc7764eb0e528ac784369750776fed2b56a
+Author: Andrew Photinakis <andrewcphotinakis@gmail.com>
+Date:   Sat Nov 29 12:00:50 2025 -0500
+
+    adding files that i need to clean up drastically
+
+commit ec40de0a471c9966f9c45d8c66e14ce43414d2eb
+Author: Andrew Photinakis <andrewcphotinakis@gmail.com>
+Date:   Fri Nov 28 23:42:58 2025 -0500
+
+    updating
+
+commit dbcecd8d46edef7135ab399302123b8ea59fae19
+Author: Andrew Photinakis <andrewcphotinakis@gmail.com>
+Date:   Fri Nov 28 20:55:36 2025 -0500
+
+    before updating UI
+
+commit 208fa1edab0852c4338a3278de02f2b0099fd2bc
+Author: Andrew Photinakis <andrewcphotinakis@gmail.com>
+Date:   Fri Nov 28 20:50:29 2025 -0500
+
+    updating
+
+commit 92baf0ad5974e67d7ca9925ba575da8a210151d2
+Author: Andrew Photinakis <andrewcphotinakis@gmail.com>
+Date:   Fri Nov 28 20:03:11 2025 -0500
+
+    updating paths
+
+commit 5188385d4b45c2f8751bf73338242312ae7969c6
+Author: Andrew Photinakis <andrewcphotinakis@gmail.com>
+Date:   Fri Nov 28 19:44:17 2025 -0500
+
+    updating with server functions
+
+commit bcbdad6b4c9b4a5a6b48b25e86ac36a9db6653e6
+Author: Andrew Photinakis <andrewcphotinakis@gmail.com>
+Date:   Fri Nov 28 19:02:34 2025 -0500
+
+    updating exceptions
+
+commit efb82703539a6b57ffe7536628a377e0b5b3bdd7
+Author: Andrew Photinakis <andrewcphotinakis@gmail.com>
+Date:   Fri Nov 28 18:56:52 2025 -0500
+
+    updating readme
+
+commit 124da44281b7c017de95436bdd45e9a53e60a8d7
+Author: Andrew Photinakis <andrewcphotinakis@gmail.com>
+Date:   Tue Nov 25 20:13:52 2025 -0500
+
+    adding smtp server impl
+
+commit 4ea53327a3228f81873aec7a7eb7df9f75735c47
+Author: Andrew Photinakis <andrewcphotinakis@gmail.com>
+Date:   Tue Nov 25 19:52:18 2025 -0500
+
+    cleaning up docs
+
+commit 7a79ae9993eab992e3ff3e08c9f3a3a2fc98fff2
+Author: Andrew Photinakis <andrewcphotinakis@gmail.com>
+Date:   Tue Nov 25 19:48:30 2025 -0500
+
+    updating code for mailbox impl
+
+commit 1d4d1496adf2b2bf62c63bb17894d9ee5465c9b7
+Author: Andrew Photinakis <andrewcphotinakis@gmail.com>
+Date:   Tue Nov 25 19:29:03 2025 -0500
+
+    added metadata functionality
+
+commit ec9525820fbbb7cab7d02a08c2242b191af740ed
+Author: Andrew Photinakis <andrewcphotinakis@gmail.com>
+Date:   Tue Nov 25 19:24:19 2025 -0500
+
+    imple config for commons, and mailbox writer
+    :
+
+commit 0fdb90c77d3aed48fbd1bcf725d2be4ea2c619a3
+Author: Andrew Photinakis <andrewcphotinakis@gmail.com>
+Date:   Tue Nov 25 19:05:22 2025 -0500
+
+    added docs
+
+commit b4b9aec39e09333988d0993b0fccf9b7254e3d96
+Author: Andrew Photinakis <andrewcphotinakis@gmail.com>
+Date:   Tue Nov 25 18:59:07 2025 -0500
+
+    adding user auth and user maanger
+
+commit 868482a3d6ce209d702cc0bc3cd00abe5fb79ec0
+Author: Andrew Photinakis <andrewcphotinakis@gmail.com>
+Date:   Tue Nov 25 18:34:38 2025 -0500
+
+    fixed rdt
+
+commit ff5ec6980cdee45fda38d4e4ba835813ed9b4418
+Author: Andrew Photinakis <andrewcphotinakis@gmail.com>
+Date:   Tue Nov 25 18:30:36 2025 -0500
+
+    fixing rdt code that used tcp and wrong threading
+
+commit 409107d44b96d417fd702ac91720481e004f1c39
+Author: Andrew Photinakis <andrewcphotinakis@gmail.com>
+Date:   Tue Nov 25 18:11:45 2025 -0500
+
+    fixing rdt impl
+
+commit a42844e904add68f1ed358d796b31479e7a36978
+Author: Andrew Photinakis <andrewcphotinakis@gmail.com>
+Date:   Tue Nov 25 18:00:43 2025 -0500
+
+    updating rdt log messages to use util class
+
+commit 6723072ca6f1bf71a5be6dfba3a3ebc7f0681da9
+Author: Andrew Photinakis <andrewcphotinakis@gmail.com>
+Date:   Tue Nov 25 17:30:35 2025 -0500
+
+    updating reqs.txt
+
+commit 20ad18232dc9e37f795532849ec57214e96bf7c9
+Author: Andrew Photinakis <andrewcphotinakis@gmail.com>
+Date:   Tue Nov 25 17:27:25 2025 -0500
+
+    updating to mvoe to local computer for dev
+
+commit e2e90cfd8a5d051ce6708e6ca0741f40c98f4840
+Author: Andrew Photinakis <andrewcphotinakis@gmail.com>
+Date:   Tue Nov 25 16:33:06 2025 -0500
+
+    initial structure of frontend
+
+commit 5b6472581059da74eccdc93a0d9cac99d8e32d01
+Author: Andrew Photinakis <andrewcphotinakis@gmail.com>
+Date:   Tue Nov 25 16:19:36 2025 -0500
+
+    updated paths
+
+commit 02ad4a0f8015e34f190c9806897e53936ea1abd9
+Author: Andrew Photinakis <andrewcphotinakis@gmail.com>
+Date:   Tue Nov 25 16:14:35 2025 -0500
+
+    fixing relative imports to be absolute
+
+commit f3189639724852cfeb7287d359c4a179f1eada64
+Author: Andrew Photinakis <andrewcphotinakis@gmail.com>
+Date:   Tue Nov 25 16:08:03 2025 -0500
+
+    updating frontend
+
+commit 86c58325baeab063838b91cc3872203d89f5a6d4
+Author: Andrew Photinakis <andrewcphotinakis@gmail.com>
+Date:   Tue Nov 25 15:52:30 2025 -0500
+
+    initial exec of frontend
+
+commit f941a7fd543b5e6b247fd48bcd49dab02485b36f
+Author: Andrew Photinakis <andrewcphotinakis@gmail.com>
+Date:   Tue Nov 25 14:44:52 2025 -0500
+
+    adding design doc for gmail
+
+commit fd2a7506339cd5bf8a1deaa6dec22a471132a1bf
+Author: Andrew Photinakis <andrewcphotinakis@gmail.com>
+Date:   Mon Nov 24 19:01:33 2025 -0500
+
+    updating with calebs code
+
+commit 92d44daaecd6a4f46220e73f68ecb45b572b9f7b
+Author: Andrew Photinakis <andrewcphotinakis@gmail.com>
+Date:   Thu Nov 20 19:37:16 2025 -0500
+
+    updating project structure idea
+
+commit 67338ed1e497abd2beb4877a6baf681f32c16f74
+Author: Andrew Photinakis <andrewcphotinakis@gmail.com>
+Date:   Thu Nov 20 18:40:40 2025 -0500
+
+    updating structure
+
+commit 862a6f7772c0273b53c61c7406106f82f630451c
+Author: Andrew Photinakis <andrewcphotinakis@gmail.com>
+Date:   Thu Nov 20 18:32:18 2025 -0500
+
+    updated rule again bc supposed to export revisions after commit before adding to next commit
+
+commit 8dc67ef6cfb3241d4c0c9369e56739f462fd46a9
+Author: Andrew Photinakis <andrewcphotinakis@gmail.com>
+Date:   Thu Nov 20 18:31:40 2025 -0500
+
+    updated rule for exporting revisions
+
+commit aca89a2b08e24c4646c2d0759951f4e5f281f4e4
+Author: Andrew Photinakis <andrewcphotinakis@gmail.com>
+Date:   Thu Nov 20 18:30:48 2025 -0500
+
+    updating makefile
+
+commit 4804454f704d0533bdf3c02eaa6f2658f612055b
+Author: Andrew Photinakis <andrewcphotinakis@gmail.com>
+Date:   Thu Nov 20 18:30:17 2025 -0500
+
+    updating
+
+commit c06b4bce3c17cb3bdd9decb8a76aeb88038a1990
+Author: Andrew Photinakis <andrewcphotinakis@gmail.com>
+Date:   Thu Nov 20 18:29:53 2025 -0500
+
+    updating make file with sync_repo that updates revisions.txt when message is committed
+
+commit eee4122f2934544698fb12f8ecc3d90c201b78b9
+Author: Andrew Photinakis <andrewcphotinakis@gmail.com>
+Date:   Thu Nov 20 18:28:26 2025 -0500
+
+    updated requirements.txt
+
+commit 6a6beaa5ccc7fa755ab8819fdac832dee7df6dc8
+Author: Andrew Photinakis <andrewcphotinakis@gmail.com>
+Date:   Thu Nov 20 18:27:31 2025 -0500
+
+    added documentation and starter python code for main.py
+
+commit 03fb63f3d1057480ecfe15ee4cc76ebc99082d54
+Author: Andrew Photinakis <andrewcphotinakis@gmail.com>
+Date:   Thu Nov 20 18:06:24 2025 -0500
+
+    updating with project docs/diagrams and a simple makefile
+
+commit 0c7f466df1d849a7b890c87dadace311b61a7557
+Author: Caleb Talbott <90918332+cjt7922@users.noreply.github.com>
+Date:   Wed Nov 19 21:25:45 2025 -0500
+
+    Initial commit
