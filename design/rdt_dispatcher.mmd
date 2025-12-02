@@ -1,0 +1,41 @@
+flowchart TD
+    subgraph OS_Level [Operating System]
+        UDP[UDP Socket Buffer]
+    end
+
+    subgraph RDT_Dispatcher_Thread [Dispatcher Thread]
+        Start((Start Loop)) --> Recv{sock.recvfrom}
+        UDP --> Recv
+        Recv -->|Timeout| Start
+        Recv -->|Bytes Received| Checksum{Verify Checksum}
+        
+        Checksum -- Invalid --> Drop[Drop Packet / Log Warning]
+        Drop --> Start
+        
+        Checksum -- Valid --> Parse[Parse Packet Type]
+        
+        Parse -- "Type == ACK" --> HandleACK[Handle ACK]
+        Parse -- "Type == DATA" --> HandleData[Handle DATA]
+    end
+
+    subgraph ACK_Routing [ACK Handling Logic]
+        HandleACK --> Lookup{Key in Listeners?}
+        Lookup -- Yes --> TriggerEvent[Set threading.Event]
+        TriggerEvent --> WakeUpSender
+        Lookup -- No --> IgnoreACK[Ignore Orphan ACK]
+    end
+
+    subgraph Sender_Thread [RDTSender Thread]
+        Wait[Wait on Event]
+        WakeUpSender[Event Set!] --> Wait
+        Wait --> Success[Mark Chunk Sent]
+    end
+
+    subgraph Receiver_Logic [Data Queue Logic]
+        HandleData --> PushQueue[data_queue.put]
+    end
+
+    subgraph App_Consumer [Application Layer]
+        RDTReceiver -->|Polls| PushQueue
+        PushQueue -->|Yields| SMTP_POP3_Logic
+    end

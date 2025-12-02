@@ -40,13 +40,19 @@ format:
 	python3 -m black email-network-service/src 
 	@echo "Code formatted with black."
 
+# Generate HTML documentation (Standard Multi-Page)
 docs-html:
 	cd docs && $(MAKE) html
-	@echo "HTML documentation built in docs/build/html"
+	@echo "HTML documentation built in docs/build/html/index.html"
 
-# Generate PDF documentation
+# Generate Single Page HTML documentation
+docs-single:
+	cd docs && $(MAKE) singlehtml
+	@echo "Single Page HTML built in docs/build/singlehtml/index.html"
+
+# Generate PDF documentation (Requires LaTeX installed)
 docs-pdf:
 	cd docs && $(MAKE) latexpdf
 	@echo "PDF documentation built in docs/build/latex"
 
-.PHONY: freeze run clean format docs-html docs-pdf
+.PHONY: freeze run clean format docs-html docs-single docs-pdf

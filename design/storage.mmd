@@ -1,0 +1,27 @@
+stateDiagram-v2
+    state "Incoming Email Data" as Input
+    
+    state StorageManager_Singleton {
+        state "Acquire User Lock" as Lock
+        state "Check/Create Dirs" as Dirs
+        
+        state MailboxWriter {
+            state "Generate Filename (UUID + Timestamp)" as Name
+            state "Write to /database/temp/{user}/" as WriteTemp
+            state "Atomic Move (os.replace)" as Move
+            state "Update metadata.json" as Meta
+        }
+        
+        state "Release User Lock" as Unlock
+    }
+
+    state "Final Storage (/database/mailboxes/{user}/)" as Final
+
+    Input --> Lock : User = 'alice'
+    Lock --> Dirs
+    Dirs --> Name
+    Name --> WriteTemp : Write Raw Bytes
+    WriteTemp --> Move : Move from Temp to Final
+    Move --> Final : File Visible to Reader
+    Move --> Meta : Add UID & Size
+    Meta --> Unlock

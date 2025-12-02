@@ -1,0 +1,42 @@
+sequenceDiagram
+    participant Clients
+    participant RDT_Recv as RDTReceiver (Gen)
+    participant ServeLoop as SMTPServer._serve_loop
+    participant ThreadPool as ThreadPoolExecutor
+    participant Handler as _process_packet
+    participant Storage as StorageManager
+
+    Note over ServeLoop: Runs in Main Thread
+
+    Clients->>RDT_Recv: Sends Packet (UDP)
+    RDT_Recv->>ServeLoop: Yields (Data, Addr)
+    
+    ServeLoop->>ServeLoop: Update Session Timeout (Reaper)
+    
+    alt Address is New
+        ServeLoop->>ServeLoop: Create Session Dict
+        ServeLoop->>Clients: Send 220 Welcome
+    end
+
+    Note over ServeLoop: NON-BLOCKING SUBMISSION
+    ServeLoop->>ThreadPool: submit(_process_packet, addr, data)
+    
+    par Worker Thread Execution
+        ThreadPool->>Handler: Start Task
+        Handler->>Handler: Check SMTP State
+        
+        alt Command (HELO, MAIL FROM)
+            Handler->>Handler: Update Session State
+            Handler->>Clients: Send Reply (via RDTSender)
+        else Data Stream (Email Body)
+            Handler->>Handler: Buffer Data
+            
+            opt End of Message (CRLF.CRLF)
+                Handler->>Storage: save_email() (File I/O)
+                Storage-->>Handler: Path Saved
+                Handler->>Clients: Send 250 OK
+            end
+        end
+    and Main Loop Continues
+        ServeLoop->>RDT_Recv: Get Next Packet
+    end

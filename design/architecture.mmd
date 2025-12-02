@@ -1,0 +1,87 @@
+classDiagram
+    namespace Application_Layer {
+        class SMTPServer {
+            +start()
+            +stop()
+            -_serve_loop()
+            -_handle_command_stream()
+        }
+        class POP3Server {
+            +start()
+            +stop()
+            -_serve_loop()
+            -_handle_command()
+        }
+        class SMTPClient {
+            +send_email()
+            -_do_handshake()
+        }
+        class POP3Client {
+            +connect()
+            +retr()
+            +list()
+        }
+    }
+
+    namespace RDT_Transport_Layer {
+        class RDTDispatcher {
+            -sock: UDP Socket
+            -data_queue: Queue
+            -ack_listeners: Dict
+            +start()
+            +_listen_loop()
+            +register_ack_waiter()
+        }
+        class RDTSender {
+            +send(data)
+            -wait_for_ack()
+        }
+        class RDTReceiver {
+            +start_receiving() Generator
+            +reset_state()
+        }
+        class RDTPacket {
+            +make_packet()
+            +calculate_checksum()
+        }
+    }
+
+    namespace Data_Persistence_Layer {
+        class StorageManager {
+            <<Singleton>>
+            -locks: Dict[user, Lock]
+            +save_email()
+            +list_messages()
+        }
+        class UserManager {
+            <<Singleton>>
+            +users: Dict
+            +authenticate()
+        }
+        class MailboxWriter {
+            +write_email()
+            -atomic_move()
+        }
+        class MailboxReader {
+            +list_messages()
+            +read_message()
+        }
+    }
+
+    %% Relationships
+    SMTPServer *-- RDTDispatcher : Composition
+    SMTPServer *-- RDTReceiver : Composition
+    SMTPServer ..> RDTSender : Creates per client
+    SMTPServer --> StorageManager : Uses
+
+    POP3Server *-- RDTDispatcher : Composition
+    POP3Server *-- RDTReceiver : Composition
+    POP3Server --> StorageManager : Uses
+    POP3Server --> UserManager : Uses
+
+    RDTDispatcher "1" --* "1" RDTReceiver : Feeds Data
+    RDTDispatcher "1" --* "*" RDTSender : Signals ACKs
+
+    StorageManager *-- MailboxWriter
+    StorageManager *-- MailboxReader
+    StorageManager ..> UserManager : References User
