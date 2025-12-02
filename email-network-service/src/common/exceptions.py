@@ -32,8 +32,6 @@ class EmailServiceError(Exception):
 # ------------------------------------------------------------------------------
 # SMTP Exceptions
 # ------------------------------------------------------------------------------
-
-
 class SMTPProtocolError(EmailServiceError):
     """
     Raised when the SMTP conversation violates the protocol rules.
@@ -85,8 +83,6 @@ class SMTPConnectionError(EmailServiceError):
 # ------------------------------------------------------------------------------
 # POP3 Exceptions
 # ------------------------------------------------------------------------------
-
-
 class POP3ProtocolError(EmailServiceError):
     """
     Raised when the POP3 conversation violates protocol rules.

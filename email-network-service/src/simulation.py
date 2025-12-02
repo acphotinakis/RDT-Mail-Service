@@ -260,7 +260,9 @@ class Simulation:
 
             # Look for matching subjects
             for sender, recipient, subject, _ in self.sent_messages:
-                if recipient.startswith(user.username):
+                # Compare exact local parts to avoid user1/user10 prefix collisions
+                recipient_local = recipient.split("@")[0].lower()
+                if recipient_local == user.username.lower():
                     if subject in received_subjects:
                         log_info_detailed(f"  Verified: {subject}")
                         self.stats.record_pop3(True)
