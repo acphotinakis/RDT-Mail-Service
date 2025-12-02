@@ -298,22 +298,29 @@ class Simulation:
             )
 
             # ----------------------------------------------------------------------
-            # DISPATCH SMTP SENDING TASKS
+            # DISPATCH SMTP SENDING TASKS — NOW RESPECTS num_emails EVEN IF num_users IS SMALL
             # ----------------------------------------------------------------------
-            for index, user in enumerate(self.users, start=1):
-                self.log.info(
-                    f"[SIM] QUEUING TASK {index}/{len(self.users)} for user '{user.username}'."
-                )
+            task_id = 1
+            total_tasks = len(self.users) * self.num_emails
 
-                future = pool.submit(self._smtp_send_task, user)
-                futures.append(future)
-
-                # Optional staggering for simulation realism or load-shaping
-                if self.delay_between_sends > 0:
-                    self.log.debug(
-                        f"[SIM] Delaying next task for {self.delay_between_sends:.3f} seconds..."
+            for user in self.users:
+                for i in range(self.num_emails):
+                    self.log.info(
+                        f"[SIM] QUEUING TASK {task_id}/{total_tasks} — "
+                        f"user '{user.username}', email #{i+1}/{self.num_emails}"
                     )
-                    time.sleep(self.delay_between_sends)
+
+                    future = pool.submit(self._smtp_send_task, user)
+                    futures.append(future)
+
+                    task_id += 1
+
+                    # Optional staggering
+                    if self.delay_between_sends > 0:
+                        self.log.debug(
+                            f"[SIM] Delaying next task for {self.delay_between_sends:.3f} seconds..."
+                        )
+                        time.sleep(self.delay_between_sends)
 
             self.log.info(
                 "[SIM] All tasks submitted to ThreadPoolExecutor — awaiting completion..."

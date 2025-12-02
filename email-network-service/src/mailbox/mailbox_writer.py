@@ -95,8 +95,8 @@ class MailboxWriter:
 
         self.log.info(
             f"Assigned message filename: {filename}\n"
-            f"    Temp path:  {temp_path}\n"
-            f"    Final path: {final_path}"
+            # f"    Temp path:  {temp_path}\n"
+            # f"    Final path: {final_path}"
         )
 
         # Extract MIME text:
