@@ -478,16 +478,9 @@ def parse_args():
 def main():
     register_logger(
         key="detailed",
-        name="DETAILED <--> EMAIL_NETWORK_SERVICE <--> SIMULATION",
+        name="email_network_service_logger",
         level="DEBUG",
-        log_file="detailed.log",
-    )
-
-    register_logger(
-        key="simple",
-        name="SIMPLE <--> EMAIL_NETWORK_SERVICE <--> SIMULATION",
-        level="INFO",
-        log_file="simple.log",
+        log_file="email_network_service_logger_detailed.log",
     )
 
     args = parse_args()
