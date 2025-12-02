@@ -1,4 +1,10 @@
-# Path: src/mailbox/mailbox_reader.py
+"""
+Read-only accessors for mailbox contents and metadata.
+
+The mailbox reader loads metadata, enumerates stored messages, retrieves
+individual files, and exposes UID lookup helpers required by POP3 commands.
+All operations are non-destructive and intended for concurrent read access.
+"""
 
 import os
 import json
@@ -11,14 +17,19 @@ from src.common.logger import *
 
 class MailboxReader:
     """
-    Provides read-only access to a user's mailbox directory.
-    Responsible for:
-      - Efficient retrieval of metadata.json
-      - Fast listing of messages (POP3 LIST, STAT, UIDL)
-      - Loading full raw content of message files (POP3 RETR)
+    Provide read-only operations over a user's mailbox directory.
+
+    The reader consumes metadata.json to support listing and UIDL semantics
+    and exposes helpers for loading message bodies for POP3 RETR operations.
     """
 
     def __init__(self):
+        """
+        Initialize the mailbox reader and log its configuration.
+
+        No filesystem operations occur during construction; the reader performs
+        disk access only when individual methods are invoked.
+        """
 
         log_info_detailed("MailboxReader initialized.")
         log_info_detailed(self.to_string())
@@ -26,9 +37,14 @@ class MailboxReader:
     # Internal: Load metadata for a user
     def _load_metadata(self, metadata_path: str) -> Dict:
         """
-        Safely loads the user's metadata.json file.
+        Load mailbox metadata with fallbacks for missing or invalid files.
 
-        Returns empty structure if missing or corrupt.
+        Args:
+            metadata_path (str): Absolute path to the metadata.json file.
+
+        Returns:
+            Dict: Parsed metadata structure or a default empty mapping when the
+            file cannot be read.
         """
         log_debug_detailed(f"Attempting to load metadata.json from: {metadata_path}")
 
@@ -60,13 +76,17 @@ class MailboxReader:
     # Public: List messages (POP3 LIST, STAT, UIDL)
     def list_messages(self, user: User) -> List[Tuple[str, int, str]]:
         """
-        Returns a list of tuples describing each message:
-            (filename, size_bytes, uid)
+        List visible messages for the given user.
 
-        This enables:
-            - LIST (size listing)
-            - STAT (count & total size)
-            - UIDL (UID listing)
+        The listing excludes entries marked as deleted and provides filename,
+        size, and UID tuples suitable for POP3 LIST, STAT, and UIDL responses.
+
+        Args:
+            user (User): Account whose mailbox is being inspected.
+
+        Returns:
+            List[Tuple[str, int, str]]: Tuples of `(filename, size_bytes, uid)`
+            for each non-deleted message.
         """
         log_info_detailed(f"--- BEGIN MAILBOX LISTING transaction for user '{user.username}' ---")
 
@@ -113,9 +133,15 @@ class MailboxReader:
     # Public: Read full email (POP3 RETR)
     def read_message(self, user: User, filename: str) -> Optional[str]:
         """
-        Loads and returns the raw content of a message file by filename.
+        Load the raw contents of a stored message.
 
-        Used by POP3 RETR handler.
+        Args:
+            user (User): Owner of the mailbox.
+            filename (str): Message filename to retrieve.
+
+        Returns:
+            Optional[str]: Message text when the file exists and can be read;
+            otherwise `None`.
         """
         log_info_detailed(
             f"--- BEGIN READ MESSAGE for user '{user.username}' " f"(filename='{filename}') ---"
@@ -151,7 +177,15 @@ class MailboxReader:
 
     def get_uid(self, user: User, filename: str) -> Optional[str]:
         """
-        Returns the UID associated with a message file.
+        Retrieve the UID recorded for a specific message.
+
+        Args:
+            user (User): Owner of the mailbox.
+            filename (str): Identifier of the message whose UID is requested.
+
+        Returns:
+            Optional[str]: UID value from metadata when present; otherwise
+            `None`.
         """
         log_debug_detailed(f"Looking up UID for user '{user.username}', filename='{filename}'.")
 
@@ -170,7 +204,10 @@ class MailboxReader:
 
     def to_string(self) -> str:
         """
-        Returns a diagnostic overview of the MailboxReader state.
+        Render a formatted diagnostic of reader configuration.
+
+        Returns:
+            str: Summary of mailbox paths used for read access.
         """
         props = {
             "Class": self.__class__.__name__,

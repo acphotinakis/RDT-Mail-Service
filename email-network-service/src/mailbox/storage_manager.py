@@ -1,4 +1,11 @@
-# Path: src/mailbox/storage_manager.py
+"""
+Thread-safe orchestration layer for mailbox persistence and retrieval.
+
+The storage manager coordinates mailbox operations across SMTP and POP3
+handlers while enforcing per-user locking. It maintains a singleton instance
+that hands off work to reader and writer helpers and guarantees that mailbox
+directories and metadata files remain consistent under concurrent access.
+"""
 
 import os
 import json
@@ -17,17 +24,13 @@ from src.models.email_data import EmailData
 
 class StorageManager:
     """
-    A thread-safe, singleton storage controller responsible for managing
-    mailbox operations across all users in the email system.
+    Centralized, thread-safe controller for mailbox persistence.
 
-    This class acts as the primary coordination layer between high-level
-    protocol handlers (SMTP/POP3) and low-level mailbox I/O components
-    (`MailboxReader` and `MailboxWriter`). It provides synchronized access
-    to per-user mailbox directories through fine-grained locking, ensuring
-    safe concurrent operations.
-
-    The class implements the Singleton pattern to guarantee that only one
-    instance manages mailbox storage across the entire application.
+    The storage manager is implemented as a singleton to ensure that a single
+    coordinator enforces locking semantics for all mailbox interactions. It
+    proxies read and write operations to dedicated helper classes while
+    protecting per-user resources with granular locks so that concurrent SMTP
+    and POP3 operations cannot corrupt metadata or message files.
     """
 
     _instance = None
@@ -35,14 +38,14 @@ class StorageManager:
 
     def __new__(cls):
         """
-        Create or return the singleton instance of `StorageManager`.
+        Create or return the sole `StorageManager` instance.
 
-        This factory method ensures that only one instance of the manager
-        is created in the system. A re-entrant lock protects the creation
-        phase, preventing race conditions during initialization.
+        A re-entrant lock ensures that concurrent callers cannot race during
+        instance creation. Subsequent calls return the previously constructed
+        object without reinitializing shared state.
 
         Returns:
-            StorageManager: The singleton instance of the storage manager.
+            StorageManager: The globally shared storage manager.
         """
 
         if cls._instance is None:
@@ -56,7 +59,13 @@ class StorageManager:
     # Initialization
     # ----------------------------------------------------------------------
     def _initialize(self):
-        """Initializes the manager."""
+        """
+        Initialize shared collaborators and per-user locks.
+
+        This method is invoked once during singleton construction and sets up
+        the mailbox reader and writer helpers along with the internal lock
+        registry used to guard user-specific operations.
+        """
 
         # Per-user locks
         self.locks: Dict[str, threading.Lock] = {}
@@ -72,7 +81,14 @@ class StorageManager:
     # ----------------------------------------------------------------------
     def get_lock(self, username: str) -> threading.Lock:
         """
-        Retrieves or creates a per-user lock.
+        Retrieve or lazily create the mutex protecting a user's mailbox.
+
+        Args:
+            username (str): The username whose mailbox operations must be
+                synchronized.
+
+        Returns:
+            threading.Lock: The lock associated with the provided username.
         """
         username = username.lower()
         if username not in self.locks:
@@ -85,12 +101,20 @@ class StorageManager:
     # ----------------------------------------------------------------------
     def save_email(self, user: User, email_data: EmailData) -> Optional[str]:
         """
-        Thread-safe facade for saving an email (used by SMTP server).
+        Persist an email atomically for the provided user.
 
-        Steps:
-            - Acquire user lock
-            - Delegate to MailboxWriter.write_email()
-            - Release lock
+        The method acquires the per-user lock, delegates disk I/O to the
+        `MailboxWriter`, and releases the lock regardless of success. Errors
+        are logged and surfaced as a `None` return value.
+
+        Args:
+            user (User): The mailbox owner receiving the message.
+            email_data (EmailData): Structured representation of the message
+                to store.
+
+        Returns:
+            Optional[str]: Absolute path to the finalized message file when
+            persistence succeeds; otherwise `None`.
         """
         username = user.username.lower()
         lock = self.get_lock(username)
@@ -127,9 +151,17 @@ class StorageManager:
     # ----------------------------------------------------------------------
     def list_messages(self, user: User) -> List[Tuple[str, int, str]]:
         """
-        Returns list of tuples: (filename, size_bytes, uid)
+        Enumerate non-deleted messages for a user.
 
-        Delegates to MailboxReader.list_messages()
+        The method returns the filename, size, and UID for each retained
+        message by reading metadata under a per-user lock.
+
+        Args:
+            user (User): The account whose mailbox should be listed.
+
+        Returns:
+            List[Tuple[str, int, str]]: Sequence of `(filename, size_bytes, uid)`
+            tuples for each visible message. Deleted messages are excluded.
         """
         username = user.username.lower()
         lock = self.get_lock(username)
@@ -161,9 +193,18 @@ class StorageManager:
     # ----------------------------------------------------------------------
     def get_message_content(self, user: User, filename: str) -> Optional[str]:
         """
-        Returns the full raw content of a specific message.
+        Retrieve the raw contents of a stored message.
 
-        Delegates to MailboxReader.read_message()
+        The method acquires the user-level lock before delegating the read to
+        the mailbox reader. Missing files or I/O failures are logged and
+        surfaced as a `None` return value.
+
+        Args:
+            user (User): The mailbox owner.
+            filename (str): The message filename to load.
+
+        Returns:
+            Optional[str]: Full message text when available; otherwise `None`.
         """
         username = user.username.lower()
         lock = self.get_lock(username)
@@ -198,9 +239,15 @@ class StorageManager:
     # ----------------------------------------------------------------------
     def get_message_uid(self, user: User, filename: str) -> Optional[str]:
         """
-        Retrieves the UID for a specific message.
+        Look up the stable UID associated with a message file.
 
-        Delegates to MailboxReader.get_uid()
+        Args:
+            user (User): The mailbox owner.
+            filename (str): The message filename whose UID is requested.
+
+        Returns:
+            Optional[str]: The UID string if present in metadata; otherwise
+            `None`.
         """
         username = user.username.lower()
         lock = self.get_lock(username)
@@ -233,9 +280,18 @@ class StorageManager:
     # ----------------------------------------------------------------------
     def delete_email(self, user: User, filename: str) -> bool:
         """
-        Marks an email for deletion.
+        Mark a message as deleted within metadata.
 
-        Delegates to MailboxWriter.mark_message_as_deleted()
+        The method does not remove the underlying file. It sets the deleted
+        flag under a per-user lock so POP3 will exclude the message from
+        listings.
+
+        Args:
+            user (User): The mailbox owner.
+            filename (str): The message identifier to mark.
+
+        Returns:
+            bool: True if the deletion flag was recorded; otherwise False.
         """
         username = user.username.lower()
         lock = self.get_lock(username)
@@ -269,8 +325,10 @@ class StorageManager:
 
     def to_string(self) -> str:
         """
-        Returns a diagnostic overview of the StorageManager including
-        subsystem status and lock statistics.
+        Produce a formatted diagnostic snapshot of manager state.
+
+        Returns:
+            str: Human-readable summary of collaborators and lock statistics.
         """
         props = {
             "Class": self.__class__.__name__,

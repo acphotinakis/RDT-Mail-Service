@@ -1,6 +1,8 @@
 # Project based - Andrew
 .venv_python_path
 
+docs/
+
 email-network-service/database
 *.log
 

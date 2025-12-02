@@ -1,3 +1,12 @@
+"""
+User lifecycle management and authentication utilities.
+
+The user manager is a singleton responsible for loading, persisting, and
+authenticating user accounts defined in the simulation. It coordinates access
+to the on-disk users.json store while providing thread-safe retrieval and
+creation of `User` objects.
+"""
+
 import os
 import json
 import threading
@@ -9,8 +18,11 @@ from src.auth.user import User
 
 class UserManager:
     """
-    Singleton-like manager responsible for user lifecycle: loading, saving,
-    creating, and authenticating users against the persistent store (users.json).
+    Thread-safe singleton managing user persistence and authentication.
+
+    This manager encapsulates access to the JSON backing store and ensures that
+    concurrent server threads can safely create users, authenticate credentials,
+    and inspect cached user objects without corrupting state.
     """
 
     _instance = None
@@ -18,7 +30,12 @@ class UserManager:
     _lock = threading.RLock()
 
     def __new__(cls):
-        # Ensure only one instance of UserManager exists in the application
+        """
+        Construct or return the singleton instance.
+
+        Returns:
+            UserManager: The shared user manager instance.
+        """
         if cls._instance is None:
             with cls._lock:
                 if cls._instance is None:
@@ -28,7 +45,12 @@ class UserManager:
         return cls._instance
 
     def _initialize(self):
-        """Initializes the manager and loads users from disk."""
+        """
+        Populate internal caches and load persisted users.
+
+        This method runs once during singleton creation and primes the in-memory
+        cache with any users stored in the database file.
+        """
 
         # In-memory cache of User objects: {username_str: User_obj}
         self.users: Dict[str, User] = {}
@@ -38,7 +60,12 @@ class UserManager:
         log_info_detailed(self.to_string())
 
     def _load_users(self):
-        """Reads the users.json file and populates the in-memory cache."""
+        """
+        Read the users.json file and populate the cache.
+
+        The operation is guarded by the manager-level lock to prevent concurrent
+        reads and writes while materializing `User` instances.
+        """
         with self._lock:
             # if not os.path.exists(self.db_file):
             #     log_info_detailed("No user database found. Starting fresh.")
@@ -65,7 +92,12 @@ class UserManager:
                 log_error_detailed(f"Failed to load user database: {e}")
 
     def _save_users(self):
-        """Persists current users to users.json using list format."""
+        """
+        Persist the current user cache to users.json atomically.
+
+        The write is performed under the manager lock and uses a temporary file
+        followed by replacement to avoid partial writes.
+        """
         with self._lock:
             try:
                 log_debug_detailed("Saving user database.")
@@ -83,7 +115,15 @@ class UserManager:
                 log_error_detailed(f"Failed to save user database: {e}")
 
     def get_user(self, username: str) -> Optional[User]:
-        """Retrieves a User object by username (case-insensitive)."""
+        """
+        Retrieve a cached user by username.
+
+        Args:
+            username (str): Username to look up; case-insensitive.
+
+        Returns:
+            Optional[User]: Matching user instance when present; otherwise None.
+        """
         with self._lock:
             log_debug_detailed(f"Attempting to get user: {username}")
             user = self.users.get(username.lower())
@@ -94,7 +134,19 @@ class UserManager:
             return user
 
     def create_user(self, username: str, password: str) -> User:
-        """Creates a new user, hashes their password, saves to disk, and initializes mailbox."""
+        """
+        Create a new user, persist credentials, and initialize mailbox storage.
+
+        Args:
+            username (str): Username for the new account.
+            password (str): Raw password to associate with the user.
+
+        Raises:
+            ValueError: If the user already exists.
+
+        Returns:
+            User: Newly created user object.
+        """
         with self._lock:
             lower_name = username.lower()
             if lower_name in self.users:
@@ -128,7 +180,17 @@ class UserManager:
             return new_user
 
     def authenticate(self, username: str, password: str) -> Optional[User]:
-        """Attempts to authenticate a user. Returns User object on success, None on failure."""
+        """
+        Validate credentials against the cached user records.
+
+        Args:
+            username (str): Username attempting to authenticate.
+            password (str): Provided raw password.
+
+        Returns:
+            Optional[User]: User instance when authentication succeeds; otherwise
+            None.
+        """
         log_debug_detailed(f"Attempting to authenticate user: {username}")
         # No lock needed here, get_user handles read locking, verify_password doesn't modify state
         user = self.get_user(username)

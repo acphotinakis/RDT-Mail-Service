@@ -40,5 +40,13 @@ format:
 	python3 -m black email-network-service/src 
 	@echo "Code formatted with black."
 
+docs-html:
+	cd docs && $(MAKE) html
+	@echo "HTML documentation built in docs/build/html"
 
-.PHONY: freeze run clean format
+# Generate PDF documentation
+docs-pdf:
+	cd docs && $(MAKE) latexpdf
+	@echo "PDF documentation built in docs/build/latex"
+
+.PHONY: freeze run clean format docs-html docs-pdf

@@ -1,4 +1,10 @@
-# Path: src/mailbox/mailbox_writer.py
+"""
+Facilities for writing messages and metadata into mailbox storage.
+
+The mailbox writer manages atomic writes of MIME messages to per-user
+mailboxes and maintains the accompanying metadata.json entries that track
+sizes, deletion flags, and stable unique identifiers.
+"""
 
 from src.auth.user import User
 from src.models.email_data import EmailData
@@ -12,7 +18,21 @@ from typing import Optional
 
 
 class MailboxWriter:
+    """
+    Handle persistent writes of messages and metadata to user mailboxes.
+
+    The writer ensures that messages are staged to a temporary location before
+    atomic replacement to guard against partial writes, and it updates mailbox
+    metadata with size and UID information expected by POP3 semantics.
+    """
+
     def __init__(self):
+        """
+        Initialize the mailbox writer and log its configuration.
+
+        The constructor performs no disk I/O; it only emits diagnostic
+        information to help trace initialization order.
+        """
 
         log_info_detailed("Initialized MailboxWriter.")
         log_info_detailed(self.to_string())
@@ -21,6 +41,16 @@ class MailboxWriter:
     # Metadata Helpers
     # ------------------------------
     def _load_metadata(self, metadata_path: str) -> dict:
+        """
+        Load or initialize the metadata structure for a mailbox.
+
+        Args:
+            metadata_path (str): Absolute path to the metadata.json file.
+
+        Returns:
+            dict: Parsed metadata content or a default structure when the file
+            is missing or invalid.
+        """
         log_debug_detailed(f"Attempting to load metadata from: {metadata_path}")
 
         if not os.path.exists(metadata_path):
@@ -43,6 +73,13 @@ class MailboxWriter:
             return {"messages": {}}
 
     def _save_metadata(self, metadata_path: str, data: dict):
+        """
+        Persist metadata using an atomic write strategy.
+
+        Args:
+            metadata_path (str): Final destination path for metadata.json.
+            data (dict): Metadata content to serialize.
+        """
         temp_path = metadata_path + ".tmp"
         log_debug_detailed(f"Saving updated metadata to temp file: {temp_path}")
 
@@ -70,6 +107,22 @@ class MailboxWriter:
     # ------------------------------
 
     def write_email(self, user: User, email_data: EmailData) -> Optional[str]:
+        """
+        Persist a MIME message to the user's mailbox and record metadata.
+
+        The method stages the message in a temporary directory, atomically
+        moves it into the mailbox, and updates metadata with UID and size
+        information.
+
+        Args:
+            user (User): Recipient account for the message.
+            email_data (EmailData): Email payload, including MIME representation
+                and optional UID.
+
+        Returns:
+            Optional[str]: Path to the finalized message file on success; None
+            when the write or metadata update fails.
+        """
         log_info_detailed(f"--- BEGIN EMAIL WRITE TRANSACTION for user '{user.username}' ---")
 
         # Establish user mailbox directories
@@ -179,7 +232,15 @@ class MailboxWriter:
 
     def mark_message_as_deleted(self, user: User, filename: str) -> bool:
         """
-        Marks a message as deleted in the metadata.
+        Mark a message entry as deleted without removing the file.
+
+        Args:
+            user (User): Owner of the mailbox.
+            filename (str): Identifier of the message to flag.
+
+        Returns:
+            bool: True when the metadata flag was updated; False if the message
+            entry does not exist.
         """
         log_info_detailed(f"--- BEGIN EMAIL DELETE TRANSACTION for user '{user.username}' ---")
         metadata_path = os.path.join(Config.MAILBOXES_DIR, user.username, "metadata.json")
@@ -198,7 +259,10 @@ class MailboxWriter:
 
     def to_string(self) -> str:
         """
-        Returns a diagnostic overview of the MailboxWriter state.
+        Render a formatted representation of writer configuration.
+
+        Returns:
+            str: Summary of mailbox and temporary storage roots.
         """
         props = {
             "Class": self.__class__.__name__,

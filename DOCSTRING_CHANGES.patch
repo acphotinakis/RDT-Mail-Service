@@ -1,0 +1,749 @@
+diff --git a/email-network-service/src/auth/user.py b/email-network-service/src/auth/user.py
+index 7c4b3b9..f9473b1 100644
+--- a/email-network-service/src/auth/user.py
++++ b/email-network-service/src/auth/user.py
+@@ -1,3 +1,11 @@
++"""
++Domain model representing an authenticated user and mailbox owner.
++
++This module defines the `User` class, which encapsulates credential storage,
++mailbox path resolution, and serialization helpers used by authentication and
++mailbox subsystems.
++"""
++
+ import os
+ from typing import Dict, Any
+ from src.config import Config
+@@ -11,11 +19,25 @@ PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..
+ 
+ class User:
+     """
+-    Represents a system user.
+-    Stores username and raw password (both required strings).
++    Represent an authenticated user and associated mailbox location.
++
++    Instances track normalized usernames, raw passwords used by the simulation,
++    and the filesystem path to the user's mailbox root.
+     """
+ 
+     def __init__(self, username: str, password: str = "__internal__"):
++        """
++        Initialize a user with validated credentials.
++
++        Args:
++            username (str): Identifier for the user; normalized to lowercase.
++            password (str, optional): Raw password string. Defaults to the
++                internal placeholder value.
++
++        Raises:
++            ValueError: If the username or password arguments are not
++            well-formed strings.
++        """
+         if not isinstance(username, str) or not username.strip():
+             raise ValueError("username must be a non-empty string")
+         if not isinstance(password, str):
+@@ -33,6 +55,15 @@ class User:
+     # ---------------------------------------------------------
+ 
+     def set_password(self, raw_password: str) -> None:
++        """
++        Replace the stored password with a new value after validation.
++
++        Args:
++            raw_password (str): New password to associate with the user.
++
++        Raises:
++            ValueError: If the provided password is empty or not a string.
++        """
+         if not isinstance(raw_password, str) or not raw_password.strip():
+             raise ValueError("Password must be a non-empty string.")
+         log_debug_detailed(f"Setting password for {self.username}")
+@@ -40,6 +71,16 @@ class User:
+         log_info_detailed(f"Password for user {self.username} has been saved (raw).")
+ 
+     def verify_password(self, raw_password: str) -> bool:
++        """
++        Compare the provided password with the stored value.
++
++        Args:
++            raw_password (str): Candidate password to check.
++
++        Returns:
++            bool: True when the provided password matches the stored value;
++            otherwise False.
++        """
+         verified = self.password == raw_password
+         if verified:
+             log_debug_detailed(f"Password verification successful for {self.username}")
+@@ -52,7 +93,13 @@ class User:
+     # ---------------------------------------------------------
+ 
+     def to_dict(self) -> Dict[str, str]:
+-        """Serializes user data for JSON storage."""
++        """
++        Serialize user state for JSON persistence.
++
++        Returns:
++            Dict[str, str]: Mapping containing normalized username and raw
++            password.
++        """
+         log_debug_detailed(f"Serializing user {self.username} to dict.")
+         return {
+             "username": self.username,
+@@ -61,7 +108,18 @@ class User:
+ 
+     @classmethod
+     def from_dict(cls, data: Dict[str, Any]) -> "User":
+-        """Deserializes user data from JSON storage with strict type enforcement."""
++        """
++        Reconstruct a `User` from a dictionary payload.
++
++        Args:
++            data (Dict[str, Any]): Mapping containing serialized user fields.
++
++        Returns:
++            User: New instance created from the provided data.
++
++        Raises:
++            ValueError: If required fields are missing or not valid strings.
++        """
+ 
+         username = data.get("username")
+         password = data.get("password")
+@@ -75,6 +133,16 @@ class User:
+         return cls(username, password)
+ 
+     def _relative_path(self, path: str) -> str:
++        """
++        Convert an absolute path to one relative to the project root.
++
++        Args:
++            path (str): Filesystem path to relativize.
++
++        Returns:
++            str: Relative path when conversion succeeds; otherwise the original
++            path.
++        """
+         try:
+             return os.path.relpath(path, PROJECT_ROOT)
+         except Exception:
+@@ -82,9 +150,11 @@ class User:
+ 
+     def to_string(self) -> str:
+         """
+-        Human-readable representation of a User object.
+-        Shows username, mailbox path, and password characteristics
+-        (but NEVER prints the raw password).
++        Produce a diagnostic representation of the user state.
++
++        Returns:
++            str: Multi-line summary that omits the raw password but reports
++            mailbox path and metadata about credential presence.
+         """
+         relative_mailbox = self._relative_path(self.mailbox_path)
+ 
+diff --git a/email-network-service/src/auth/user_manager.py b/email-network-service/src/auth/user_manager.py
+index 70807c5..79d5271 100644
+--- a/email-network-service/src/auth/user_manager.py
++++ b/email-network-service/src/auth/user_manager.py
+@@ -1,3 +1,12 @@
++"""
++User lifecycle management and authentication utilities.
++
++The user manager is a singleton responsible for loading, persisting, and
++authenticating user accounts defined in the simulation. It coordinates access
++to the on-disk users.json store while providing thread-safe retrieval and
++creation of `User` objects.
++"""
++
+ import os
+ import json
+ import threading
+@@ -9,8 +18,11 @@ from src.auth.user import User
+ 
+ class UserManager:
+     """
+-    Singleton-like manager responsible for user lifecycle: loading, saving,
+-    creating, and authenticating users against the persistent store (users.json).
++    Thread-safe singleton managing user persistence and authentication.
++
++    This manager encapsulates access to the JSON backing store and ensures that
++    concurrent server threads can safely create users, authenticate credentials,
++    and inspect cached user objects without corrupting state.
+     """
+ 
+     _instance = None
+@@ -18,7 +30,12 @@ class UserManager:
+     _lock = threading.RLock()
+ 
+     def __new__(cls):
+-        # Ensure only one instance of UserManager exists in the application
++        """
++        Construct or return the singleton instance.
++
++        Returns:
++            UserManager: The shared user manager instance.
++        """
+         if cls._instance is None:
+             with cls._lock:
+                 if cls._instance is None:
+@@ -28,7 +45,12 @@ class UserManager:
+         return cls._instance
+ 
+     def _initialize(self):
+-        """Initializes the manager and loads users from disk."""
++        """
++        Populate internal caches and load persisted users.
++
++        This method runs once during singleton creation and primes the in-memory
++        cache with any users stored in the database file.
++        """
+ 
+         # In-memory cache of User objects: {username_str: User_obj}
+         self.users: Dict[str, User] = {}
+@@ -38,7 +60,12 @@ class UserManager:
+         log_info_detailed(self.to_string())
+ 
+     def _load_users(self):
+-        """Reads the users.json file and populates the in-memory cache."""
++        """
++        Read the users.json file and populate the cache.
++
++        The operation is guarded by the manager-level lock to prevent concurrent
++        reads and writes while materializing `User` instances.
++        """
+         with self._lock:
+             # if not os.path.exists(self.db_file):
+             #     log_info_detailed("No user database found. Starting fresh.")
+@@ -65,7 +92,12 @@ class UserManager:
+                 log_error_detailed(f"Failed to load user database: {e}")
+ 
+     def _save_users(self):
+-        """Persists current users to users.json using list format."""
++        """
++        Persist the current user cache to users.json atomically.
++
++        The write is performed under the manager lock and uses a temporary file
++        followed by replacement to avoid partial writes.
++        """
+         with self._lock:
+             try:
+                 log_debug_detailed("Saving user database.")
+@@ -83,7 +115,15 @@ class UserManager:
+                 log_error_detailed(f"Failed to save user database: {e}")
+ 
+     def get_user(self, username: str) -> Optional[User]:
+-        """Retrieves a User object by username (case-insensitive)."""
++        """
++        Retrieve a cached user by username.
++
++        Args:
++            username (str): Username to look up; case-insensitive.
++
++        Returns:
++            Optional[User]: Matching user instance when present; otherwise None.
++        """
+         with self._lock:
+             log_debug_detailed(f"Attempting to get user: {username}")
+             user = self.users.get(username.lower())
+@@ -94,7 +134,19 @@ class UserManager:
+             return user
+ 
+     def create_user(self, username: str, password: str) -> User:
+-        """Creates a new user, hashes their password, saves to disk, and initializes mailbox."""
++        """
++        Create a new user, persist credentials, and initialize mailbox storage.
++
++        Args:
++            username (str): Username for the new account.
++            password (str): Raw password to associate with the user.
++
++        Raises:
++            ValueError: If the user already exists.
++
++        Returns:
++            User: Newly created user object.
++        """
+         with self._lock:
+             lower_name = username.lower()
+             if lower_name in self.users:
+@@ -128,7 +180,17 @@ class UserManager:
+             return new_user
+ 
+     def authenticate(self, username: str, password: str) -> Optional[User]:
+-        """Attempts to authenticate a user. Returns User object on success, None on failure."""
++        """
++        Validate credentials against the cached user records.
++
++        Args:
++            username (str): Username attempting to authenticate.
++            password (str): Provided raw password.
++
++        Returns:
++            Optional[User]: User instance when authentication succeeds; otherwise
++            None.
++        """
+         log_debug_detailed(f"Attempting to authenticate user: {username}")
+         # No lock needed here, get_user handles read locking, verify_password doesn't modify state
+         user = self.get_user(username)
+diff --git a/email-network-service/src/mailbox/mailbox_reader.py b/email-network-service/src/mailbox/mailbox_reader.py
+index d832eea..5d45c89 100644
+--- a/email-network-service/src/mailbox/mailbox_reader.py
++++ b/email-network-service/src/mailbox/mailbox_reader.py
+@@ -1,4 +1,10 @@
+-# Path: src/mailbox/mailbox_reader.py
++"""
++Read-only accessors for mailbox contents and metadata.
++
++The mailbox reader loads metadata, enumerates stored messages, retrieves
++individual files, and exposes UID lookup helpers required by POP3 commands.
++All operations are non-destructive and intended for concurrent read access.
++"""
+ 
+ import os
+ import json
+@@ -11,14 +17,19 @@ from src.common.logger import *
+ 
+ class MailboxReader:
+     """
+-    Provides read-only access to a user's mailbox directory.
+-    Responsible for:
+-      - Efficient retrieval of metadata.json
+-      - Fast listing of messages (POP3 LIST, STAT, UIDL)
+-      - Loading full raw content of message files (POP3 RETR)
++    Provide read-only operations over a user's mailbox directory.
++
++    The reader consumes metadata.json to support listing and UIDL semantics
++    and exposes helpers for loading message bodies for POP3 RETR operations.
+     """
+ 
+     def __init__(self):
++        """
++        Initialize the mailbox reader and log its configuration.
++
++        No filesystem operations occur during construction; the reader performs
++        disk access only when individual methods are invoked.
++        """
+ 
+         log_info_detailed("MailboxReader initialized.")
+         log_info_detailed(self.to_string())
+@@ -26,9 +37,14 @@ class MailboxReader:
+     # Internal: Load metadata for a user
+     def _load_metadata(self, metadata_path: str) -> Dict:
+         """
+-        Safely loads the user's metadata.json file.
++        Load mailbox metadata with fallbacks for missing or invalid files.
++
++        Args:
++            metadata_path (str): Absolute path to the metadata.json file.
+ 
+-        Returns empty structure if missing or corrupt.
++        Returns:
++            Dict: Parsed metadata structure or a default empty mapping when the
++            file cannot be read.
+         """
+         log_debug_detailed(f"Attempting to load metadata.json from: {metadata_path}")
+ 
+@@ -60,13 +76,17 @@ class MailboxReader:
+     # Public: List messages (POP3 LIST, STAT, UIDL)
+     def list_messages(self, user: User) -> List[Tuple[str, int, str]]:
+         """
+-        Returns a list of tuples describing each message:
+-            (filename, size_bytes, uid)
++        List visible messages for the given user.
+ 
+-        This enables:
+-            - LIST (size listing)
+-            - STAT (count & total size)
+-            - UIDL (UID listing)
++        The listing excludes entries marked as deleted and provides filename,
++        size, and UID tuples suitable for POP3 LIST, STAT, and UIDL responses.
++
++        Args:
++            user (User): Account whose mailbox is being inspected.
++
++        Returns:
++            List[Tuple[str, int, str]]: Tuples of `(filename, size_bytes, uid)`
++            for each non-deleted message.
+         """
+         log_info_detailed(f"--- BEGIN MAILBOX LISTING transaction for user '{user.username}' ---")
+ 
+@@ -113,9 +133,15 @@ class MailboxReader:
+     # Public: Read full email (POP3 RETR)
+     def read_message(self, user: User, filename: str) -> Optional[str]:
+         """
+-        Loads and returns the raw content of a message file by filename.
++        Load the raw contents of a stored message.
++
++        Args:
++            user (User): Owner of the mailbox.
++            filename (str): Message filename to retrieve.
+ 
+-        Used by POP3 RETR handler.
++        Returns:
++            Optional[str]: Message text when the file exists and can be read;
++            otherwise `None`.
+         """
+         log_info_detailed(
+             f"--- BEGIN READ MESSAGE for user '{user.username}' " f"(filename='{filename}') ---"
+@@ -151,7 +177,15 @@ class MailboxReader:
+ 
+     def get_uid(self, user: User, filename: str) -> Optional[str]:
+         """
+-        Returns the UID associated with a message file.
++        Retrieve the UID recorded for a specific message.
++
++        Args:
++            user (User): Owner of the mailbox.
++            filename (str): Identifier of the message whose UID is requested.
++
++        Returns:
++            Optional[str]: UID value from metadata when present; otherwise
++            `None`.
+         """
+         log_debug_detailed(f"Looking up UID for user '{user.username}', filename='{filename}'.")
+ 
+@@ -170,7 +204,10 @@ class MailboxReader:
+ 
+     def to_string(self) -> str:
+         """
+-        Returns a diagnostic overview of the MailboxReader state.
++        Render a formatted diagnostic of reader configuration.
++
++        Returns:
++            str: Summary of mailbox paths used for read access.
+         """
+         props = {
+             "Class": self.__class__.__name__,
+diff --git a/email-network-service/src/mailbox/mailbox_writer.py b/email-network-service/src/mailbox/mailbox_writer.py
+index 09afc32..ec2d59e 100644
+--- a/email-network-service/src/mailbox/mailbox_writer.py
++++ b/email-network-service/src/mailbox/mailbox_writer.py
+@@ -1,4 +1,10 @@
+-# Path: src/mailbox/mailbox_writer.py
++"""
++Facilities for writing messages and metadata into mailbox storage.
++
++The mailbox writer manages atomic writes of MIME messages to per-user
++mailboxes and maintains the accompanying metadata.json entries that track
++sizes, deletion flags, and stable unique identifiers.
++"""
+ 
+ from src.auth.user import User
+ from src.models.email_data import EmailData
+@@ -12,7 +18,21 @@ from typing import Optional
+ 
+ 
+ class MailboxWriter:
++    """
++    Handle persistent writes of messages and metadata to user mailboxes.
++
++    The writer ensures that messages are staged to a temporary location before
++    atomic replacement to guard against partial writes, and it updates mailbox
++    metadata with size and UID information expected by POP3 semantics.
++    """
++
+     def __init__(self):
++        """
++        Initialize the mailbox writer and log its configuration.
++
++        The constructor performs no disk I/O; it only emits diagnostic
++        information to help trace initialization order.
++        """
+ 
+         log_info_detailed("Initialized MailboxWriter.")
+         log_info_detailed(self.to_string())
+@@ -21,6 +41,16 @@ class MailboxWriter:
+     # Metadata Helpers
+     # ------------------------------
+     def _load_metadata(self, metadata_path: str) -> dict:
++        """
++        Load or initialize the metadata structure for a mailbox.
++
++        Args:
++            metadata_path (str): Absolute path to the metadata.json file.
++
++        Returns:
++            dict: Parsed metadata content or a default structure when the file
++            is missing or invalid.
++        """
+         log_debug_detailed(f"Attempting to load metadata from: {metadata_path}")
+ 
+         if not os.path.exists(metadata_path):
+@@ -43,6 +73,13 @@ class MailboxWriter:
+             return {"messages": {}}
+ 
+     def _save_metadata(self, metadata_path: str, data: dict):
++        """
++        Persist metadata using an atomic write strategy.
++
++        Args:
++            metadata_path (str): Final destination path for metadata.json.
++            data (dict): Metadata content to serialize.
++        """
+         temp_path = metadata_path + ".tmp"
+         log_debug_detailed(f"Saving updated metadata to temp file: {temp_path}")
+ 
+@@ -70,6 +107,22 @@ class MailboxWriter:
+     # ------------------------------
+ 
+     def write_email(self, user: User, email_data: EmailData) -> Optional[str]:
++        """
++        Persist a MIME message to the user's mailbox and record metadata.
++
++        The method stages the message in a temporary directory, atomically
++        moves it into the mailbox, and updates metadata with UID and size
++        information.
++
++        Args:
++            user (User): Recipient account for the message.
++            email_data (EmailData): Email payload, including MIME representation
++                and optional UID.
++
++        Returns:
++            Optional[str]: Path to the finalized message file on success; None
++            when the write or metadata update fails.
++        """
+         log_info_detailed(f"--- BEGIN EMAIL WRITE TRANSACTION for user '{user.username}' ---")
+ 
+         # Establish user mailbox directories
+@@ -179,7 +232,15 @@ class MailboxWriter:
+ 
+     def mark_message_as_deleted(self, user: User, filename: str) -> bool:
+         """
+-        Marks a message as deleted in the metadata.
++        Mark a message entry as deleted without removing the file.
++
++        Args:
++            user (User): Owner of the mailbox.
++            filename (str): Identifier of the message to flag.
++
++        Returns:
++            bool: True when the metadata flag was updated; False if the message
++            entry does not exist.
+         """
+         log_info_detailed(f"--- BEGIN EMAIL DELETE TRANSACTION for user '{user.username}' ---")
+         metadata_path = os.path.join(Config.MAILBOXES_DIR, user.username, "metadata.json")
+@@ -198,7 +259,10 @@ class MailboxWriter:
+ 
+     def to_string(self) -> str:
+         """
+-        Returns a diagnostic overview of the MailboxWriter state.
++        Render a formatted representation of writer configuration.
++
++        Returns:
++            str: Summary of mailbox and temporary storage roots.
+         """
+         props = {
+             "Class": self.__class__.__name__,
+diff --git a/email-network-service/src/mailbox/storage_manager.py b/email-network-service/src/mailbox/storage_manager.py
+index 16a2b8e..50ddd4a 100644
+--- a/email-network-service/src/mailbox/storage_manager.py
++++ b/email-network-service/src/mailbox/storage_manager.py
+@@ -1,4 +1,11 @@
+-# Path: src/mailbox/storage_manager.py
++"""
++Thread-safe orchestration layer for mailbox persistence and retrieval.
++
++The storage manager coordinates mailbox operations across SMTP and POP3
++handlers while enforcing per-user locking. It maintains a singleton instance
++that hands off work to reader and writer helpers and guarantees that mailbox
++directories and metadata files remain consistent under concurrent access.
++"""
+ 
+ import os
+ import json
+@@ -17,17 +24,13 @@ from src.models.email_data import EmailData
+ 
+ class StorageManager:
+     """
+-    A thread-safe, singleton storage controller responsible for managing
+-    mailbox operations across all users in the email system.
+-
+-    This class acts as the primary coordination layer between high-level
+-    protocol handlers (SMTP/POP3) and low-level mailbox I/O components
+-    (`MailboxReader` and `MailboxWriter`). It provides synchronized access
+-    to per-user mailbox directories through fine-grained locking, ensuring
+-    safe concurrent operations.
++    Centralized, thread-safe controller for mailbox persistence.
+ 
+-    The class implements the Singleton pattern to guarantee that only one
+-    instance manages mailbox storage across the entire application.
++    The storage manager is implemented as a singleton to ensure that a single
++    coordinator enforces locking semantics for all mailbox interactions. It
++    proxies read and write operations to dedicated helper classes while
++    protecting per-user resources with granular locks so that concurrent SMTP
++    and POP3 operations cannot corrupt metadata or message files.
+     """
+ 
+     _instance = None
+@@ -35,14 +38,14 @@ class StorageManager:
+ 
+     def __new__(cls):
+         """
+-        Create or return the singleton instance of `StorageManager`.
++        Create or return the sole `StorageManager` instance.
+ 
+-        This factory method ensures that only one instance of the manager
+-        is created in the system. A re-entrant lock protects the creation
+-        phase, preventing race conditions during initialization.
++        A re-entrant lock ensures that concurrent callers cannot race during
++        instance creation. Subsequent calls return the previously constructed
++        object without reinitializing shared state.
+ 
+         Returns:
+-            StorageManager: The singleton instance of the storage manager.
++            StorageManager: The globally shared storage manager.
+         """
+ 
+         if cls._instance is None:
+@@ -56,7 +59,13 @@ class StorageManager:
+     # Initialization
+     # ----------------------------------------------------------------------
+     def _initialize(self):
+-        """Initializes the manager."""
++        """
++        Initialize shared collaborators and per-user locks.
++
++        This method is invoked once during singleton construction and sets up
++        the mailbox reader and writer helpers along with the internal lock
++        registry used to guard user-specific operations.
++        """
+ 
+         # Per-user locks
+         self.locks: Dict[str, threading.Lock] = {}
+@@ -72,7 +81,14 @@ class StorageManager:
+     # ----------------------------------------------------------------------
+     def get_lock(self, username: str) -> threading.Lock:
+         """
+-        Retrieves or creates a per-user lock.
++        Retrieve or lazily create the mutex protecting a user's mailbox.
++
++        Args:
++            username (str): The username whose mailbox operations must be
++                synchronized.
++
++        Returns:
++            threading.Lock: The lock associated with the provided username.
+         """
+         username = username.lower()
+         if username not in self.locks:
+@@ -85,12 +101,20 @@ class StorageManager:
+     # ----------------------------------------------------------------------
+     def save_email(self, user: User, email_data: EmailData) -> Optional[str]:
+         """
+-        Thread-safe facade for saving an email (used by SMTP server).
++        Persist an email atomically for the provided user.
++
++        The method acquires the per-user lock, delegates disk I/O to the
++        `MailboxWriter`, and releases the lock regardless of success. Errors
++        are logged and surfaced as a `None` return value.
+ 
+-        Steps:
+-            - Acquire user lock
+-            - Delegate to MailboxWriter.write_email()
+-            - Release lock
++        Args:
++            user (User): The mailbox owner receiving the message.
++            email_data (EmailData): Structured representation of the message
++                to store.
++
++        Returns:
++            Optional[str]: Absolute path to the finalized message file when
++            persistence succeeds; otherwise `None`.
+         """
+         username = user.username.lower()
+         lock = self.get_lock(username)
+@@ -127,9 +151,17 @@ class StorageManager:
+     # ----------------------------------------------------------------------
+     def list_messages(self, user: User) -> List[Tuple[str, int, str]]:
+         """
+-        Returns list of tuples: (filename, size_bytes, uid)
++        Enumerate non-deleted messages for a user.
++
++        The method returns the filename, size, and UID for each retained
++        message by reading metadata under a per-user lock.
+ 
+-        Delegates to MailboxReader.list_messages()
++        Args:
++            user (User): The account whose mailbox should be listed.
++
++        Returns:
++            List[Tuple[str, int, str]]: Sequence of `(filename, size_bytes, uid)`
++            tuples for each visible message. Deleted messages are excluded.
+         """
+         username = user.username.lower()
+         lock = self.get_lock(username)
+@@ -161,9 +193,18 @@ class StorageManager:
+     # ----------------------------------------------------------------------
+     def get_message_content(self, user: User, filename: str) -> Optional[str]:
+         """
+-        Returns the full raw content of a specific message.
++        Retrieve the raw contents of a stored message.
++
++        The method acquires the user-level lock before delegating the read to
++        the mailbox reader. Missing files or I/O failures are logged and
++        surfaced as a `None` return value.
+ 
+-        Delegates to MailboxReader.read_message()
++        Args:
++            user (User): The mailbox owner.
++            filename (str): The message filename to load.
++
++        Returns:
++            Optional[str]: Full message text when available; otherwise `None`.
+         """
+         username = user.username.lower()
+         lock = self.get_lock(username)
+@@ -198,9 +239,15 @@ class StorageManager:
+     # ----------------------------------------------------------------------
+     def get_message_uid(self, user: User, filename: str) -> Optional[str]:
+         """
+-        Retrieves the UID for a specific message.
++        Look up the stable UID associated with a message file.
++
++        Args:
++            user (User): The mailbox owner.
++            filename (str): The message filename whose UID is requested.
+ 
+-        Delegates to MailboxReader.get_uid()
++        Returns:
++            Optional[str]: The UID string if present in metadata; otherwise
++            `None`.
+         """
+         username = user.username.lower()
+         lock = self.get_lock(username)
+@@ -233,9 +280,18 @@ class StorageManager:
+     # ----------------------------------------------------------------------
+     def delete_email(self, user: User, filename: str) -> bool:
+         """
+-        Marks an email for deletion.
++        Mark a message as deleted within metadata.
++
++        The method does not remove the underlying file. It sets the deleted
++        flag under a per-user lock so POP3 will exclude the message from
++        listings.
++
++        Args:
++            user (User): The mailbox owner.
++            filename (str): The message identifier to mark.
+ 
+-        Delegates to MailboxWriter.mark_message_as_deleted()
++        Returns:
++            bool: True if the deletion flag was recorded; otherwise False.
+         """
+         username = user.username.lower()
+         lock = self.get_lock(username)
+@@ -269,8 +325,10 @@ class StorageManager:
+ 
+     def to_string(self) -> str:
+         """
+-        Returns a diagnostic overview of the StorageManager including
+-        subsystem status and lock statistics.
++        Produce a formatted diagnostic snapshot of manager state.
++
++        Returns:
++            str: Human-readable summary of collaborators and lock statistics.
+         """
+         props = {
+             "Class": self.__class__.__name__,
