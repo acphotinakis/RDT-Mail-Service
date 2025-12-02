@@ -32,6 +32,7 @@ class POP3Server:
         self._thread: Optional[threading.Thread] = None
 
         self.log.info(f"POP3 server initialized on {self.host}:{self.port}")
+        self.log.info(self.to_string())
 
     def _get_sender(self, addr: Tuple[str, int]) -> RDTSender:
         if addr not in self._senders:
@@ -244,7 +245,7 @@ class POP3Server:
             self._thread.join(timeout=2.0)
         self.log.info("POP3 server stopped.")
 
-    def print_config(self) -> None:
+    def to_string(self) -> str:
         """
         Returns a pretty-formatted overview of the POP3Server's configuration
         and runtime state. Useful for debugging, diagnostics, and health checks.
@@ -293,4 +294,4 @@ class POP3Server:
         lines.append("-" * (longest_key + 30))
 
         msg = "\n".join(lines)
-        self.log.info(msg)
+        return msg

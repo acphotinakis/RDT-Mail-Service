@@ -27,7 +27,8 @@ class RDTSender:
             self.dispatcher.start()
 
         self.curr_seq = 0
-        self.log.info(f"RDTSender initialized targeting {self.dest_addr}")
+        self.log.info(f"RDT Sender initialized on {self.dest_addr}")
+        self.log.info(self.to_string())
 
     def send(self, data_chunk: bytes):
         """
@@ -71,3 +72,24 @@ class RDTSender:
     def close(self):
         # Dispatcher is shared, so we don't stop it here usually
         pass
+
+    def to_string(self) -> str:
+        """
+        Returns a diagnostic summary of the sender's connection state.
+        """
+        props = {
+            "Destination": f"{self.dest_addr[0]}:{self.dest_addr[1]}",
+            "Current SEQ": self.curr_seq,
+            "Dispatcher Running": self.dispatcher.running,
+            "Socket FD": self.dispatcher.sock.fileno(),
+        }
+
+        longest = max(len(k) for k in props)
+        lines = ["\nRDTSender State:"]
+        lines.append("-" * (longest + 30))
+
+        for k, v in props.items():
+            lines.append(f"{k.ljust(longest)} : {v}")
+
+        lines.append("-" * (longest + 30))
+        return "\n".join(lines)

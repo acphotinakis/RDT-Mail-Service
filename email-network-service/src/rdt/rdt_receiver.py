@@ -25,6 +25,11 @@ class RDTReceiver:
         self.expected_seqs: Dict[Tuple[str, int], int] = {}
         self.running = True
 
+        self.log.info(
+            f"RDT Receiver initialized on {self.sock.getsockname()[0]}:{self.sock.getsockname()[1]}"
+        )
+        self.log.info(self.to_string())
+
     def start_receiving(self):
         """
         Generator that yields (valid_data_bytes, sender_addr).
@@ -75,3 +80,25 @@ class RDTReceiver:
 
     def stop(self):
         self.running = False
+
+    def to_string(self) -> str:
+        """
+        Returns the runtime state of the RDTReceiver.
+        """
+        props = {
+            "Running": self.running,
+            "Tracked Clients": len(self.expected_seqs),
+            "Expected SEQs": dict(self.expected_seqs),
+            "Dispatcher Running": self.dispatcher.running,
+            "Socket FD": self.sock.fileno(),
+        }
+
+        longest = max(len(k) for k in props)
+        lines = ["\nRDTReceiver State:"]
+        lines.append("-" * (longest + 30))
+
+        for k, v in props.items():
+            lines.append(f"{k.ljust(longest)} : {v}")
+
+        lines.append("-" * (longest + 30))
+        return "\n".join(lines)

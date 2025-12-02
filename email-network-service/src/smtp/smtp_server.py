@@ -14,7 +14,7 @@ from src.rdt.rdt_sender import RDTSender
 from src.rdt.rdt_dispatcher import RDTDispatcher
 from src.mailbox.storage_manager import StorageManager
 from src.auth.user import User
-from src.client.frontend.models import EmailData
+from src.models.email_data import EmailData
 from src.auth.user_manager import UserManager
 
 SMTP_EOL = b"\r\n"
@@ -60,6 +60,7 @@ class SMTPServer:
         self._thread = None
 
         self.log.info(f"SMTP server initialized on {self.host}:{self.port}")
+        self.log.info(self.to_string())
 
     def _get_sender(self, addr: Tuple[str, int]) -> RDTSender:
         if addr not in self._senders:
@@ -379,7 +380,7 @@ class SMTPServer:
             self._thread.join(timeout=2.0)
         self.log.info("SMTP server stopped.")
 
-    def print_config(self) -> None:
+    def to_string(self) -> str:
         """
         Returns a pretty-formatted overview of the POP3Server's configuration
         and runtime state. Useful for debugging, diagnostics, and health checks.
@@ -427,4 +428,4 @@ class SMTPServer:
         lines.append("-" * (longest_key + 30))
 
         msg = "\n".join(lines)
-        self.log.info(msg)
+        return msg

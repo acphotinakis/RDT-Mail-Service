@@ -4,6 +4,11 @@ from src.config import Config
 from src.common.logger import get_class_logger
 
 
+import os
+
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+
+
 class User:
     """
     Represents a system user.
@@ -70,16 +75,23 @@ class User:
 
         return cls(username, password)
 
+    def _relative_path(self, path: str) -> str:
+        try:
+            return os.path.relpath(path, PROJECT_ROOT)
+        except Exception:
+            return path
+
     def to_string(self) -> str:
         """
         Human-readable representation of a User object.
         Shows username, mailbox path, and password characteristics
         (but NEVER prints the raw password).
         """
+        relative_mailbox = self._relative_path(self.mailbox_path)
 
         props = {
             "Username": self.username,
-            "Mailbox Path": self.mailbox_path,
+            "Mailbox Path": relative_mailbox,
             "Password Set": self.password != "__internal__",
             "Password Length": len(self.password) if self.password else 0,
             "Object ID": hex(id(self)),

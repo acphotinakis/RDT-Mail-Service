@@ -12,7 +12,7 @@ import os
 import threading
 import traceback
 import argparse
-
+from concurrent.futures import ThreadPoolExecutor
 
 # ----------------------------------------------
 #  Import Setup
@@ -120,6 +120,7 @@ class Simulation:
         self.smtp_server = None
         self.pop3_server = None
         self.sent_messages = []
+        self.log.info(self.to_string())
 
     # ----------------------------------------------
     # Infrastructure Management
@@ -134,8 +135,6 @@ class Simulation:
 
         self.smtp_server.start()
         self.pop3_server.start()
-        self.smtp_server.print_config()
-        self.pop3_server.print_config()
 
         # Allow sockets to bind
         time.sleep(1.0)
@@ -275,48 +274,195 @@ class Simulation:
         self.log.info("POP3 verification completed.")
 
     def run_email_simulation(self):
-        self.log.info("=== PHASE 3: Multi-Threaded Email Traffic ===")
+        self.log.info(
+            f"=== PHASE 3: Multi-Threaded Email Traffic STARTED ===\n"
+            f"Concurrency Level     : {self.concurrency}\n"
+            f"Users Participating    : {len(self.users)}\n"
+            f"Delay Between Sends    : {self.delay_between_sends}s\n"
+            f"Total Email Targets    : {self.num_users} users\n"
+            f"Message Size (approx.) : {self.message_size} bytes\n"
+            "-------------------------------------------------------"
+        )
 
-        # start timer
         self.stats.start_timer()
+        start_timestamp = time.time()
 
-        threads = []
-        for user in self.users:
-            t = threading.Thread(target=self._smtp_send_task, args=(user,), daemon=True)
-            t.start()
-            threads.append(t)
-            time.sleep(random.uniform(0.1, 0.3))
+        # Create the pool
+        self.log.info("[SIM] Allocating ThreadPoolExecutor...")
+        with ThreadPoolExecutor(max_workers=self.concurrency) as pool:
+            futures = []
 
-        for t in threads:
-            t.join()
+            self.log.info(
+                f"[SIM] ThreadPoolExecutor READY — Max Workers = {self.concurrency}\n"
+                f"[SIM] Dispatching SMTP tasks..."
+            )
 
-        self.stats.stop_timer()  # Stop Timer
-        self.log.info("SMTP concurrency simulation finished.")
+            # ----------------------------------------------------------------------
+            # DISPATCH SMTP SENDING TASKS
+            # ----------------------------------------------------------------------
+            for index, user in enumerate(self.users, start=1):
+                self.log.info(
+                    f"[SIM] QUEUING TASK {index}/{len(self.users)} for user '{user.username}'."
+                )
+
+                future = pool.submit(self._smtp_send_task, user)
+                futures.append(future)
+
+                # Optional staggering for simulation realism or load-shaping
+                if self.delay_between_sends > 0:
+                    self.log.debug(
+                        f"[SIM] Delaying next task for {self.delay_between_sends:.3f} seconds..."
+                    )
+                    time.sleep(self.delay_between_sends)
+
+            self.log.info(
+                "[SIM] All tasks submitted to ThreadPoolExecutor — awaiting completion..."
+            )
+
+            # ----------------------------------------------------------------------
+            # WAIT FOR ALL TASKS TO FINISH
+            # ----------------------------------------------------------------------
+            completed = 0
+            total = len(futures)
+
+            for future in futures:
+                try:
+                    future.result()  # Block until the thread completes
+                    completed += 1
+                    self.log.info(
+                        f"[SIM] Task Completion Progress: {completed}/{total} "
+                        f"({(completed/total)*100:.1f}%)"
+                    )
+                except Exception as e:
+                    self.log.error(
+                        f"[SIM] ERROR: Exception while executing SMTP task.\n"
+                        f"Reason: {e}\n"
+                        "Traceback follows:",
+                        exc_info=True,
+                    )
+
+        # ----------------------------------------------------------------------
+        # FINISH / CLEANUP
+        # ----------------------------------------------------------------------
+        self.stats.stop_timer()
+        total_time = time.time() - start_timestamp
+
+        self.log.info(
+            f"=== PHASE 3 COMPLETE: Multi-Threaded SMTP Simulation Finished ===\n"
+            f"Total Users Processed  : {len(self.users)}\n"
+            f"Concurrency Level      : {self.concurrency}\n"
+            f"Total Execution Time   : {total_time:.3f}s\n"
+            f"Avg Throughput         : {self.stats.smtp_success / total_time:.2f} msg/sec\n"
+            f"--------------------------------------------------------------"
+        )
+
+    # def run_email_simulation(self):
+    #     self.log.info("=== PHASE 3: Multi-Threaded Email Traffic ===")
+
+    #     # start timer
+    #     self.stats.start_timer()
+
+    #     threads = []
+    #     for user in self.users:
+    #         t = threading.Thread(target=self._smtp_send_task, args=(user,), daemon=True)
+    #         t.start()
+    #         threads.append(t)
+    #         time.sleep(random.uniform(0.1, 0.3))
+
+    #     for t in threads:
+    #         t.join()
+
+    #     self.stats.stop_timer()  # Stop Timer
+    #     self.log.info("SMTP concurrency simulation finished.")
 
     def run(self):
         self.setup_users()
         self.start_servers()
         self.run_email_simulation()
-        # sys.exit(0)
         # Wait a moment for server to flush to disk
         time.sleep(3.0)
+        sys.exit(0)
         self.run_pop3_integrity_check()
         self.stop_servers()
 
         # Print Final Stats
         self.stats.print_summary()
 
+    def to_string(self) -> str:
+        """
+        Returns a detailed diagnostic overview of the Simulation environment,
+        configuration, internal state, and runtime components.
+        """
+
+        props = {
+            # --- Simulation Config ---
+            "Num Users": self.num_users,
+            "Num Emails/User": self.num_emails,
+            "Concurrency": self.concurrency,
+            "Delay Between Sends": self.delay_between_sends,
+            "Message Size": self.message_size,
+            # --- Internal Structures ---
+            "Users Loaded": len(self.users),
+            "Usernames": ", ".join(u.username for u in self.users) if self.users else "(none)",
+            "Sent Messages (Recorded)": len(self.sent_messages),
+            # --- Subsystems ---
+            "User Manager": self.user_manager.__class__.__name__,
+            "Stats Tracker": self.stats.__class__.__name__,
+            "SMTP Server": (
+                f"{self.smtp_server.__class__.__name__} @ "
+                f"{self.smtp_server.host}:{self.smtp_server.port}"
+                if self.smtp_server
+                else "(not started)"
+            ),
+            "POP3 Server": (
+                f"{self.pop3_server.__class__.__name__} @ "
+                f"{self.pop3_server.host}:{self.pop3_server.port}"
+                if self.pop3_server
+                else "(not started)"
+            ),
+            # --- Singleton Info ---
+            "Instance Address": hex(id(self)),
+        }
+
+        # Compute alignment width
+        longest = max(len(k) for k in props.keys())
+        lines = ["\nSimulation State:"]
+        lines.append("-" * (longest + 30))
+
+        for k, v in props.items():
+            lines.append(f"{k.ljust(longest)} : {v}")
+
+        lines.append("-" * (longest + 30))
+        return "\n".join(lines)
+
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Email Network Simulation")
 
-    parser.add_argument("--num_users", type=int, help="Number of users to create")
-    parser.add_argument("--num_emails", type=int, help="Number of emails each user will send")
-    parser.add_argument("--concurrency", type=int, help="Max concurrent sending threads")
     parser.add_argument(
-        "--delay_between_sends", type=float, help="Delay between launching send threads"
+        "--num_users", type=int, default=10, help="Number of users to create (default: 10)"
     )
-    parser.add_argument("--message_size", type=int, help="Approximate message size in bytes")
+    parser.add_argument(
+        "--num_emails",
+        type=int,
+        default=5,
+        help="Number of emails each user will send (default: 5)",
+    )
+    parser.add_argument(
+        "--concurrency", type=int, default=5, help="Max concurrent sending threads (default: 5)"
+    )
+    parser.add_argument(
+        "--delay_between_sends",
+        type=float,
+        default=0.2,
+        help="Delay between launching send threads (default: 0.2)",
+    )
+    parser.add_argument(
+        "--message_size",
+        type=int,
+        default=200,
+        help="Approximate message size in bytes (default: 200)",
+    )
 
     return parser.parse_args()
 
@@ -330,6 +476,7 @@ def main():
 
     args = parse_args()
     Config.apply_args(args)
+    Config.log_config()
 
     sim = Simulation(
         num_users=Config.NUM_USERS,
@@ -338,6 +485,8 @@ def main():
         delay_between_sends=Config.DELAY_BETWEEN_SENDS,
         message_size=Config.MESSAGE_SIZE,
     )
+
+    sim.to_string()
 
     try:
         sim.run()

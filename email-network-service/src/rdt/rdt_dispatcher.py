@@ -35,6 +35,9 @@ class RDTDispatcher:
         self._ack_listeners: Dict[Tuple[str, int, int], threading.Event] = {}
         self._ack_lock = threading.Lock()
 
+        self.logger.info("RDT Dispatcher initialized.")
+        self.logger.info(self.to_string())
+
     def start(self):
         """Starts the background listening thread."""
         if self.running:
@@ -124,3 +127,29 @@ class RDTDispatcher:
             return self.data_queue.get(block=True, timeout=timeout)
         except queue.Empty:
             return None
+
+    def to_string(self) -> str:
+        """
+        Returns a detailed snapshot of dispatcher runtime state.
+        """
+        thread_alive = self._thread.is_alive() if self._thread else False
+
+        props = {
+            "Socket FD": self.sock.fileno(),
+            "Socket Timeout": self.sock.gettimeout(),
+            "Dispatcher Running": self.running,
+            "Thread Alive": thread_alive,
+            "Thread Name": self._thread.name if self._thread else None,
+            "Queued Data Packets": self.data_queue.qsize(),
+            "ACK Listeners Count": len(self._ack_listeners),
+        }
+
+        longest = max(len(k) for k in props)
+        lines = ["\nRDTDispatcher State:"]
+        lines.append("-" * (longest + 30))
+
+        for k, v in props.items():
+            lines.append(f"{k.ljust(longest)} : {v}")
+
+        lines.append("-" * (longest + 30))
+        return "\n".join(lines)

@@ -36,14 +36,15 @@ class StorageManager:
     def _initialize(self):
         """Initializes the manager."""
         self.log = get_class_logger(self)
-        self.log.info("StorageManager initialized.")
-        self.log.info(self.to_string())
-
-        self.mailbox_reader = MailboxReader()
-        self.mailbox_writer = MailboxWriter()
 
         # Per-user locks
         self.locks: Dict[str, threading.Lock] = {}
+
+        self.mailbox_reader = MailboxReader()
+        self.mailbox_writer = MailboxWriter()
+        
+        self.log.info("StorageManager initialized.")
+        self.log.info(self.to_string())
 
     # ----------------------------------------------------------------------
     # Internal lock retrieval helper

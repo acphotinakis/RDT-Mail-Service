@@ -79,6 +79,11 @@ class SMTPClient:
 
         self.is_connected = False
 
+        self.log.info(
+            f"SMTP Client initialized on {self.sock.getsockname()[0]}:{self.sock.getsockname()[1]}"
+        )
+        self.log.info(self.to_string())
+
     def send_email(self, sender: str, recipient: str, subject: str, body: str) -> bool:
         """
         Sends an email by executing the full SMTP transaction.
@@ -250,3 +255,41 @@ class SMTPClient:
             self.dispatcher.stop()
         if self.sock:
             self.sock.close()
+
+    def to_string(self) -> str:
+        """
+        Returns a detailed diagnostic overview of the SMTPClient state,
+        including socket info, dispatcher status, RDT components, and
+        connection flags.
+        """
+        sock = self.sock
+        dispatcher_thread = self.dispatcher._thread if self.dispatcher else None
+
+        props = {
+            "Socket Bound": f"{sock.getsockname()[0]}:{sock.getsockname()[1]}",
+            "Server Target": f"{Config.SMTP_SERVER_HOST}:{Config.SMTP_SERVER_PORT}",
+            "RDT Timeout": Config.RDT_TIMEOUT,
+            "Max Payload Size": Config.MAX_PAYLOAD_SIZE,
+            # --- Connection State ---
+            "Connected": self.is_connected,
+            # --- Dispatcher ---
+            "Dispatcher Running": self.dispatcher.running,
+            "Dispatcher Thread Alive": (
+                dispatcher_thread.is_alive() if dispatcher_thread else False
+            ),
+            "Dispatcher Thread Name": (dispatcher_thread.name if dispatcher_thread else None),
+            # --- RDT Components ---
+            "RDT Sender Dest": f"{self.rdt_sender.dest_addr}",
+            "Receiver Active": self.rdt_receiver.running,
+        }
+
+        longest = max(len(k) for k in props.keys())
+        lines = ["\nSMTPClient State:"]
+        lines.append("-" * (longest + 30))
+
+        for key, value in props.items():
+            lines.append(f"{key.ljust(longest)} : {value}")
+
+        lines.append("-" * (longest + 30))
+
+        return "\n".join(lines)
