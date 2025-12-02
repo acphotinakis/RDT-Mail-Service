@@ -22,18 +22,19 @@ run:
 		--delay_between_sends $(DELAY) \
 		--message_size $(MESSAGE_SIZE)
 
-
-# Clean build output and venv
 clean:
-	@echo "Clearing email database..."
-	@find email-network-service/database/mailboxes -type f -name "*.msg" -delete
-	@find email-network-service/database/mailboxes -type f -name "metadata.json" -delete
-	@find email-network-service/database/temp -mindepth 1 -delete
+	@echo "=== Cleaning Email Database ==="
+	@find email-network-service/database/mailboxes -type f -delete
+	@find email-network-service/database/mailboxes -mindepth 1 -type d -exec rm -rf {} +
+	@find email-network-service/database/temp -mindepth 1 -exec rm -rf {} +
 	@rm -f email-network-service/database/users.json
-	@echo "Recreating metadata directories..."
-	@find email-network-service/database/mailboxes -type d -exec touch {}/metadata.json \;
+	@echo "Recreating empty mailbox directories and metadata.json files..."
+	@mkdir -p email-network-service/database/mailboxes
 	@echo "Database cleared and reset."
-	@echo "Cleaned."
+	@echo "=== Removing __pycache__ directories ==="
+	@find . -type d -name "__pycache__" -prune -exec rm -rf {} +
+	@echo "Removed all __pycache__ directories."
+	@echo "=== Cleaning Completed ==="
 
 format:
 	python3 -m black email-network-service/src 
