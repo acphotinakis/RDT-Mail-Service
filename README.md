@@ -1,121 +1,74 @@
+Email Network Service
+=====================
 
-# Email System Project - Makefile Guide
+Simulation of an email system that speaks SMTP and POP3 over a custom reliable UDP data transfer layer. The code lives in `email-network-service/` and is driven by the top-level `Makefile`.
 
-This project uses a `Makefile` to simplify virtual environment management, dependency installation, running the application, building documentation, and generating revision logs. This README explains each part of the Makefile and how to use it.
 
----
+Prerequisites
+-------------
+- Python 3.10+ (see `email-network-service/pyproject.toml`)
+- `make`
+- Optional: a virtual environment to isolate dependencies
 
-## Table of Contents
 
-- [Prerequisites](#prerequisites)
-- [Makefile Workflow](#makefile-workflow)
-  - [1. Create a Python Virtual Environment](#1-create-a-python-virtual-environment)
-  - [2. Install Dependencies](#2-install-dependencies)
-  - [3. Freeze Dependencies](#3-freeze-dependencies)
-  - [4. Run the Application](#4-run-the-application)
-  - [5. Build Documentation](#5-build-documentation)
-  - [6. Generate Revision Logs](#6-generate-revision-logs)
-  - [7. Clean Build and Environment](#7-clean-build-and-environment)
-- [Notes](#notes)
-
----
-
-## Prerequisites
-
-- Python 3.11 or newer
-- `make` installed on your system
-- Git installed (for revision logs)
-- Internet access for installing Python packages
-
----
-
-## Makefile Workflow
-
-### 1. Create a Python Virtual Environment
-
-```bash
-make venv PYTHON=/path/to/python3.11
-````
-
-* Creates a virtual environment in the `.venv` directory.
-* Saves the Python executable path in `.venv_python_path`.
-* Checks that Python version is >= 3.11.
-* **Important:** This step must be done first before any other commands.
-
-### 2. Install Dependencies
-
-```bash
-make install
+Setup
+-----
+1) Create and activate a virtual environment (recommended):
+```
+python3 -m venv .venv
+source .venv/bin/activate
+```
+2) Install Python dependencies:
+```
+pip install -r requirements.txt
 ```
 
-* Installs all Python packages listed in `requirements.txt`.
-* Uses the Python executable from `.venv_python_path`.
-* Upgrades `pip` automatically.
 
-### 3. Freeze Dependencies
+How to Run
+----------
+The simulation boots an SMTP server (UDP 2525), a POP3 server (UDP 1100), spawns SMTP clients to send messages, then verifies delivery via POP3 clients.
 
-```bash
-make freeze
+### Quick start with Make
+Run from the repo root:
 ```
-
-* Regenerates `requirements.txt` from the virtual environment.
-* Ensures the file matches the currently installed packages.
-* Automatically uses the saved Python path.
-
-### 4. Run the Application
-
-```bash
 make run
 ```
+Defaults (overridable via make variables): `NUM_USERS=2`, `NUM_EMAILS=1`, `CONCURRENCY=10`, `DELAY=0.2`, `MESSAGE_SIZE=200`.
 
-* Runs the main program located at `src/main.py`.
-* Uses the Python executable from the venv.
-
-### 5. Build Documentation
-
-```bash
-make docs
+Example with custom load:
+```
+make run NUM_USERS=5 NUM_EMAILS=3 CONCURRENCY=4 DELAY=0.1 MESSAGE_SIZE=512
 ```
 
-* Uses Sphinx to build HTML documentation from the `docs/` folder.
-* Output is placed in `docs/_build/html`.
-
-### 6. Generate Revision Logs
-
-```bash
-make revisions
+### Running the module directly
+From inside `email-network-service/`, use the same CLI flags as the Makefile target:
 ```
-
-* Writes a summary of Git commits to `revisions.txt`.
-
-### 7. Clean Build and Environment
-
-```bash
-make clean
+cd email-network-service
+python3 -m src.simulation --num_users 5 --num_emails 2 --concurrency 3 --delay_between_sends 0.3 --message_size 512
 ```
+If your Python build rejects the hyphenated module path used in the Makefile, this direct invocation avoids the issue.
 
-* Deletes the virtual environment `.venv`.
-* Deletes built documentation in `docs/_build/`.
-* Deletes `revisions.txt`.
-* Deletes `.venv_python_path`.
 
----
+Command-Line Options
+--------------------
+`python3 -m src.simulation [options]`
 
-## Notes
+- `--num_users`           Number of user accounts to create (default: 10)
+- `--num_emails`          Emails each user sends (default: 5)
+- `--concurrency`         Max concurrent sending threads (default: 5)
+- `--delay_between_sends` Seconds to wait before launching the next send thread (default: 0.2)
+- `--message_size`        Approximate email size in bytes (default: 200)
 
-* The first time you create a venv, you **must** provide the Python executable with:
 
-  ```bash
-  make venv PYTHON=/usr/bin/python3.11
-  ```
+Maintenance Commands
+--------------------
+- `make clean`   Reset the local database in `email-network-service/database/` and remove `__pycache__` folders.
+- `make format`  Format the source with `black`.
+- `make freeze`  Regenerate `requirements.txt` from the current environment.
 
-* After that, the Makefile will automatically read the saved Python executable path for all other commands.
 
-* If you move or remove your Python executable, you will need to recreate the venv.
-
-* Always ensure the virtual environment is active (or the Makefile will handle it for commands that use the venv).
-
----
-
-This Makefile ensures consistent Python usage across development, testing, and documentation building, while simplifying dependency management and reproducibility.
-
+Files and Logs
+--------------
+- Simulation and protocol code: `email-network-service/src/`
+- Data storage: `email-network-service/database/`
+- Detailed run log: `email_network_service_logger_detailed.log` (created in the repo root after a run)

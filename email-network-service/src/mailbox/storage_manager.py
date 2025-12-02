@@ -16,13 +16,35 @@ from src.models.email_data import EmailData
 
 
 class StorageManager:
+    """
+    A thread-safe, singleton storage controller responsible for managing
+    mailbox operations across all users in the email system.
+
+    This class acts as the primary coordination layer between high-level
+    protocol handlers (SMTP/POP3) and low-level mailbox I/O components
+    (`MailboxReader` and `MailboxWriter`). It provides synchronized access
+    to per-user mailbox directories through fine-grained locking, ensuring
+    safe concurrent operations.
+
+    The class implements the Singleton pattern to guarantee that only one
+    instance manages mailbox storage across the entire application.
+    """
+
     _instance = None
     _lock = threading.RLock()  # Global lock for singleton creation only
 
     def __new__(cls):
         """
-        Singleton factory. Ensures only one StorageManager exists.
+        Create or return the singleton instance of `StorageManager`.
+
+        This factory method ensures that only one instance of the manager
+        is created in the system. A re-entrant lock protects the creation
+        phase, preventing race conditions during initialization.
+
+        Returns:
+            StorageManager: The singleton instance of the storage manager.
         """
+
         if cls._instance is None:
             with cls._lock:
                 if cls._instance is None:
