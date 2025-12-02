@@ -3,7 +3,6 @@
 
 docs/
 
-email-network-service/database
 *.log
 
 # Byte-compiled / optimized / DLL files
