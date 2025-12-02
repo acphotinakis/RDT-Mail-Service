@@ -1,10 +1,20 @@
-Below is a **fully rewritten, polished, deeply detailed `README.md`**, incorporating *every piece of information you provided* while restructuring it into a professional, aesthetic, GitHub-ready document.
+<h1 align="center">📧 Email Network Service</h1>
 
-This version is production-grade and suitable for open-source release, academic submission, or portfolio presentation.
+<p align="center">
+  <strong>SMTP + POP3 over a Custom Reliable UDP RDT Protocol</strong><br>
+  End-to-End Email System Simulation with Reliability, Concurrency & Atomic Storage
+</p>
 
-You can paste this directly into `README.md`.
+<p align="center">
+  <img src="https://img.shields.io/badge/Python-3.10+-blue" />
+  <img src="https://img.shields.io/badge/Protocol-RDT%203.0-orange" />
+  <img src="https://img.shields.io/badge/SMTP-2525-green" />
+  <img src="https://img.shields.io/badge/POP3-1100-purple" />
+  <img src="https://img.shields.io/badge/Status-Simulation%20Ready-brightgreen" />
+</p>
 
 ---
+
 
 # Email Network Service
 
