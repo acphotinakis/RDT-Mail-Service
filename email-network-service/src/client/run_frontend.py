@@ -7,7 +7,7 @@ from src.client.frontend.gui_qt.main_window_qt import MainWindowQt
 from src.client.frontend.gui_qt.welcome_view_qt import WelcomeDialog
 from src.client.frontend.controllers.auth_controller import AuthController
 import src.client.frontend.autologin_manager as autologin_manager
-from src.common.logger import setup_logger, get_class_logger
+from src.common.logger import *
 
 
 log = get_class_logger("RUN_FRONTEND")

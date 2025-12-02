@@ -1,6 +1,6 @@
 import socket
 import threading
-from src.common.logger import get_class_logger
+from src.common.logger import *
 from src.rdt.rdt_packet import make_data_packet
 from src.config import Config
 
@@ -18,7 +18,7 @@ class RDTSender:
     """
 
     def __init__(self, dest_host: str, dest_port: int, dispatcher: "RDTDispatcher"):
-        self.log = get_class_logger(self)
+
         self.dest_addr = (dest_host, dest_port)
         self.dispatcher = dispatcher
 
@@ -27,13 +27,14 @@ class RDTSender:
             self.dispatcher.start()
 
         self.curr_seq = 0
-        self.log.info(f"RDT Sender initialized on {self.dest_addr}")
-        self.log.info(self.to_string())
+        log_info_detailed(f"RDT Sender initialized on {self.dest_addr}")
+        log_info_detailed(self.to_string())
 
     def send(self, data_chunk: bytes):
         """
         Reliable send. Blocks until ACK is received or max retries exhausted.
         """
+
         sndpkt = make_data_packet(self.curr_seq, data_chunk)
 
         max_retries = 5
@@ -48,16 +49,16 @@ class RDTSender:
             )
 
             try:
-                self.log.debug(f"Sender: Sending SEQ {seq_to_use} (Attempt {attempts + 1})")
+                log_debug_detailed(f"Sender: Sending SEQ {seq_to_use} (Attempt {attempts + 1})")
                 self.dispatcher.sock.sendto(sndpkt, self.dest_addr)
 
                 if ack_event.wait(timeout=Config.RDT_TIMEOUT):
-                    self.log.debug(f"Sender: ACK {seq_to_use} received.")
+                    log_debug_detailed(f"Sender: ACK {seq_to_use} received.")
                     # Only toggle state after success logic is confirmed
                     self.curr_seq = 1 - self.curr_seq
                     return True
                 else:
-                    self.log.info(f"Sender: Timeout waiting for ACK {seq_to_use}.")
+                    log_info_detailed(f"Sender: Timeout waiting for ACK {seq_to_use}.")
                     attempts += 1
 
             finally:
@@ -66,7 +67,7 @@ class RDTSender:
                     self.dest_addr[0], self.dest_addr[1], seq_to_use
                 )
 
-        self.log.error(f"Sender: Max retries ({max_retries}) reached. Connection lost.")
+        log_error_detailed(f"Sender: Max retries ({max_retries}) reached. Connection lost.")
         raise ConnectionError("Max retries reached")
 
     def close(self):

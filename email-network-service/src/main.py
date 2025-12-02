@@ -5,7 +5,7 @@ import time
 
 
 from src.config import Config
-from src.common.logger import setup_logger, get_class_logger
+from src.common.logger import *
 from src.smtp.smtp_server import SMTPServer
 from src.pop3.pop3_server import POP3Server
 from src.client.run_frontend import run_frontend
@@ -14,7 +14,6 @@ from src.client.run_frontend import run_frontend
 class Main:
     def __init__(self):
         setup_logger("MAIN", level=Config.LOG_LEVEL)
-        self.log = get_class_logger(self)
 
     def main(self):
         """
@@ -31,17 +30,17 @@ class Main:
         args = parser.parse_args()
 
         if args.action == "server":
-            self.log.info("Running in SERVER mode.")
+            log_info_detailed("Running in SERVER mode.")
             self.run_server()
         elif args.action == "client":
-            self.log.info("Running in CLIENT mode.")
+            log_info_detailed("Running in CLIENT mode.")
             self.run_client()
 
     def run_server(self):
         """
         Starts both the SMTP and POP3 servers in separate threads.
         """
-        self.log.info("Starting email server...")
+        log_info_detailed("Starting email server...")
 
         # Initialize servers
         smtp_server = SMTPServer(Config.SMTP_SERVER_HOST, Config.SMTP_SERVER_PORT)
@@ -54,8 +53,12 @@ class Main:
         smtp_thread.start()
         pop3_thread.start()
 
-        self.log.info(f"SMTP Server running on {Config.SMTP_SERVER_HOST}:{Config.SMTP_SERVER_PORT}")
-        self.log.info(f"POP3 Server running on {Config.POP3_SERVER_HOST}:{Config.POP3_SERVER_PORT}")
+        log_info_detailed(
+            f"SMTP Server running on {Config.SMTP_SERVER_HOST}:{Config.SMTP_SERVER_PORT}"
+        )
+        log_info_detailed(
+            f"POP3 Server running on {Config.POP3_SERVER_HOST}:{Config.POP3_SERVER_PORT}"
+        )
         print("Servers are running. Press Ctrl+C to stop.")
 
         try:
@@ -63,19 +66,19 @@ class Main:
             while smtp_thread.is_alive() and pop3_thread.is_alive():
                 time.sleep(1)
         except KeyboardInterrupt:
-            self.log.info("Keyboard interrupt received. Stopping servers...")
+            log_info_detailed("Keyboard interrupt received. Stopping servers...")
             smtp_server.stop()
             pop3_server.stop()
-            self.log.info("Servers stopped.")
+            log_info_detailed("Servers stopped.")
             sys.exit(0)
 
     def run_client(self):
         """
         Starts the email client frontend.
         """
-        self.log.info("Starting email client...")
+        log_info_detailed("Starting email client...")
         run_frontend()
-        self.log.info("Email client stopped.")
+        log_info_detailed("Email client stopped.")
 
 
 if __name__ == "__main__":

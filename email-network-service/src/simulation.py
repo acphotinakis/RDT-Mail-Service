@@ -29,7 +29,7 @@ from src.smtp.smtp_server import SMTPServer
 from src.pop3.pop3_server import POP3Server
 from src.pop3.pop3_client import POP3Client
 from src.config import Config
-from src.common.logger import setup_logger, get_class_logger
+from src.common.logger import *
 
 import shutil
 import json
@@ -106,7 +106,6 @@ class SimulationStats:
 
 class Simulation:
     def __init__(self, num_users, num_emails, concurrency, delay_between_sends, message_size):
-        self.log = get_class_logger(self)
 
         self.num_users = num_users
         self.num_emails = num_emails
@@ -120,15 +119,15 @@ class Simulation:
         self.smtp_server = None
         self.pop3_server = None
         self.sent_messages = []
-        self.log.info(self.to_string())
+        log_info_detailed(self.to_string())
 
     # ----------------------------------------------
     # Infrastructure Management
     # ----------------------------------------------
     def start_servers(self):
-        self.log.info("=== PHASE 1: STARTING INFRASTRUCTURE ===")
+        log_info_detailed("=== PHASE 1: STARTING INFRASTRUCTURE ===")
 
-        self.log.info("Starting SMTP server...")
+        log_info_detailed("Starting SMTP server...")
 
         self.smtp_server = SMTPServer(Config.SMTP_SERVER_HOST, Config.SMTP_SERVER_PORT)
         self.pop3_server = POP3Server(Config.POP3_SERVER_HOST, Config.POP3_SERVER_PORT)
@@ -138,10 +137,10 @@ class Simulation:
 
         # Allow sockets to bind
         time.sleep(1.0)
-        self.log.info("SMTP + POP3 servers running.")
+        log_info_detailed("SMTP + POP3 servers running.")
 
     def stop_servers(self):
-        self.log.info("=== SHUTDOWN INFRASTRUCTURE ===")
+        log_info_detailed("=== SHUTDOWN INFRASTRUCTURE ===")
         if self.smtp_server:
             self.smtp_server.stop()
         if self.pop3_server:
@@ -173,7 +172,7 @@ class Simulation:
     # User Setup
     # ----------------------------------------------
     def setup_users(self):
-        self.log.info(f"=== PHASE 2: Creating {self.num_users} Users ===")
+        log_info_detailed(f"=== PHASE 2: Creating {self.num_users} Users ===")
         self.ensure_directories()
         self.ensure_users_json()
         for i in range(1, self.num_users + 1):
@@ -185,7 +184,7 @@ class Simulation:
                 user = self.user_manager.create_user(username, password)
 
             self.users.append(user)
-        self.log.info("Users ready: " + ", ".join(u.username for u in self.users))
+        log_info_detailed("Users ready: " + ", ".join(u.username for u in self.users))
 
     # ================================================================
     #           CORE: MULTI-THREADED EMAIL SENDING
@@ -210,7 +209,7 @@ class Simulation:
             # Record for POP3 verification
             self.sent_messages.append((sender_email, recipient_email, subject, body))
 
-            self.log.info(f"[SMTP] {sender_user.username} -> {recipient_user.username}")
+            log_info_detailed(f"[SMTP] {sender_user.username} -> {recipient_user.username}")
 
             # Note: SMTPClient must use ephemeral ports (bind to 0) for this to work concurrently
             smtp_client = SMTPClient()
@@ -226,13 +225,13 @@ class Simulation:
             self.stats.record_smtp(ok, payload_size)
 
             if ok:
-                self.log.info(f"[SMTP] Delivery OK ({sender_user.username})")
+                log_info_detailed(f"[SMTP] Delivery OK ({sender_user.username})")
             else:
-                self.log.error(f"[SMTP] Delivery FAILED ({sender_user.username})")
+                log_error_detailed(f"[SMTP] Delivery FAILED ({sender_user.username})")
 
         except Exception as e:
             self.stats.record_smtp(False, 0)
-            self.log.error(f"[SMTP THREAD ERROR]: {e}")
+            log_error_detailed(f"[SMTP THREAD ERROR]: {e}")
             traceback.print_exc()
 
     # ================================================================
@@ -242,7 +241,7 @@ class Simulation:
         """
         Ensures messages that were sent exist in mailbox via POP3.
         """
-        self.log.info("=== PHASE 4: POP3 Consistency Verification ===")
+        log_info_detailed("=== PHASE 4: POP3 Consistency Verification ===")
 
         def extract_subject(raw_text):
             for line in raw_text.splitlines():
@@ -251,7 +250,7 @@ class Simulation:
             return ""
 
         for user in self.users:
-            self.log.info(f"[POP3] Checking mailbox of {user.username}")
+            log_info_detailed(f"[POP3] Checking mailbox of {user.username}")
 
             client = POP3Client()
             raw_messages = client.get_all_messages(user.username, "password")
@@ -263,18 +262,18 @@ class Simulation:
             for sender, recipient, subject, _ in self.sent_messages:
                 if recipient.startswith(user.username):
                     if subject in received_subjects:
-                        self.log.info(f"  ✅ Verified: {subject}")
+                        log_info_detailed(f"  Verified: {subject}")
                         self.stats.record_pop3(True)
                     else:
-                        self.log.error(
-                            f"  ❌ MISSING: {subject} (Expected in {user.username}'s inbox)"
+                        log_error_detailed(
+                            f"  MISSING: {subject} (Expected in {user.username}'s inbox)"
                         )
                         self.stats.record_pop3(False)
 
-        self.log.info("POP3 verification completed.")
+        log_info_detailed("POP3 verification completed.")
 
     def run_email_simulation(self):
-        self.log.info(
+        log_info_detailed(
             f"=== PHASE 3: Multi-Threaded Email Traffic STARTED ===\n"
             f"Concurrency Level     : {self.concurrency}\n"
             f"Users Participating    : {len(self.users)}\n"
@@ -288,11 +287,11 @@ class Simulation:
         start_timestamp = time.time()
 
         # Create the pool
-        self.log.info("[SIM] Allocating ThreadPoolExecutor...")
+        log_info_detailed("[SIM] Allocating ThreadPoolExecutor...")
         with ThreadPoolExecutor(max_workers=self.concurrency) as pool:
             futures = []
 
-            self.log.info(
+            log_info_detailed(
                 f"[SIM] ThreadPoolExecutor READY — Max Workers = {self.concurrency}\n"
                 f"[SIM] Dispatching SMTP tasks..."
             )
@@ -305,7 +304,7 @@ class Simulation:
 
             for user in self.users:
                 for i in range(self.num_emails):
-                    self.log.info(
+                    log_info_detailed(
                         f"[SIM] QUEUING TASK {task_id}/{total_tasks} — "
                         f"user '{user.username}', email #{i+1}/{self.num_emails}"
                     )
@@ -317,12 +316,12 @@ class Simulation:
 
                     # Optional staggering
                     if self.delay_between_sends > 0:
-                        self.log.debug(
+                        log_debug_detailed(
                             f"[SIM] Delaying next task for {self.delay_between_sends:.3f} seconds..."
                         )
                         time.sleep(self.delay_between_sends)
 
-            self.log.info(
+            log_info_detailed(
                 "[SIM] All tasks submitted to ThreadPoolExecutor — awaiting completion..."
             )
 
@@ -336,12 +335,12 @@ class Simulation:
                 try:
                     future.result()  # Block until the thread completes
                     completed += 1
-                    self.log.info(
+                    log_info_detailed(
                         f"[SIM] Task Completion Progress: {completed}/{total} "
                         f"({(completed/total)*100:.1f}%)"
                     )
                 except Exception as e:
-                    self.log.error(
+                    log_error_detailed(
                         f"[SIM] ERROR: Exception while executing SMTP task.\n"
                         f"Reason: {e}\n"
                         "Traceback follows:",
@@ -354,7 +353,7 @@ class Simulation:
         self.stats.stop_timer()
         total_time = time.time() - start_timestamp
 
-        self.log.info(
+        log_info_detailed(
             f"=== PHASE 3 COMPLETE: Multi-Threaded SMTP Simulation Finished ===\n"
             f"Total Users Processed  : {len(self.users)}\n"
             f"Concurrency Level      : {self.concurrency}\n"
@@ -364,7 +363,7 @@ class Simulation:
         )
 
     # def run_email_simulation(self):
-    #     self.log.info("=== PHASE 3: Multi-Threaded Email Traffic ===")
+    #     log_info_detailed("=== PHASE 3: Multi-Threaded Email Traffic ===")
 
     #     # start timer
     #     self.stats.start_timer()
@@ -380,7 +379,7 @@ class Simulation:
     #         t.join()
 
     #     self.stats.stop_timer()  # Stop Timer
-    #     self.log.info("SMTP concurrency simulation finished.")
+    #     log_info_detailed("SMTP concurrency simulation finished.")
 
     def run(self):
         self.setup_users()
@@ -388,7 +387,7 @@ class Simulation:
         self.run_email_simulation()
         # Wait a moment for server to flush to disk
         time.sleep(3.0)
-        sys.exit(0)
+        # sys.exit(0)
         self.run_pop3_integrity_check()
         self.stop_servers()
 
@@ -475,10 +474,18 @@ def parse_args():
 
 
 def main():
-    setup_logger(
-        name="EMAIL_NETWORK_SERVICE <--> SIMULATION",
+    register_logger(
+        key="detailed",
+        name="DETAILED <--> EMAIL_NETWORK_SERVICE <--> SIMULATION",
+        level="DEBUG",
+        log_file="detailed.log",
+    )
+
+    register_logger(
+        key="simple",
+        name="SIMPLE <--> EMAIL_NETWORK_SERVICE <--> SIMULATION",
         level="INFO",
-        log_file="email_network_service.log",
+        log_file="simple.log",
     )
 
     args = parse_args()

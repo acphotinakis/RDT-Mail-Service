@@ -1,6 +1,6 @@
 import pytest
 
-from src.common.logger import setup_logger, get_class_logger
+from src.common.logger import *
 
 
 def test_setup_logger():
@@ -12,7 +12,7 @@ def test_setup_logger():
 
 class MyClass:
     def __init__(self):
-        self.log = get_class_logger(self)
+        
 
 
 def test_get_class_logger():

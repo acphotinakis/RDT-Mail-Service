@@ -1,7 +1,7 @@
 import os
 from typing import Dict, Any
 from src.config import Config
-from src.common.logger import get_class_logger
+from src.common.logger import *
 
 
 import os
@@ -21,13 +21,12 @@ class User:
         if not isinstance(password, str):
             raise ValueError("password must be a string")
 
-        self.log = get_class_logger(self)
         self.username = username.lower()
         self.password = password
         self.mailbox_path = os.path.join(Config.MAILBOXES_DIR, self.username)
 
-        self.log.debug(f"User object initialized for {self.username}")
-        self.log.info(self.to_string())
+        log_debug_detailed(f"User object initialized for {self.username}")
+        log_info_detailed(self.to_string())
 
     # ---------------------------------------------------------
     # Password handling (still raw)
@@ -36,16 +35,16 @@ class User:
     def set_password(self, raw_password: str) -> None:
         if not isinstance(raw_password, str) or not raw_password.strip():
             raise ValueError("Password must be a non-empty string.")
-        self.log.debug(f"Setting password for {self.username}")
+        log_debug_detailed(f"Setting password for {self.username}")
         self.password = raw_password
-        self.log.info(f"Password for user {self.username} has been saved (raw).")
+        log_info_detailed(f"Password for user {self.username} has been saved (raw).")
 
     def verify_password(self, raw_password: str) -> bool:
         verified = self.password == raw_password
         if verified:
-            self.log.debug(f"Password verification successful for {self.username}")
+            log_debug_detailed(f"Password verification successful for {self.username}")
         else:
-            self.log.warning(f"Password verification failed for {self.username}")
+            log_warning_detailed(f"Password verification failed for {self.username}")
         return verified
 
     # ---------------------------------------------------------
@@ -54,7 +53,7 @@ class User:
 
     def to_dict(self) -> Dict[str, str]:
         """Serializes user data for JSON storage."""
-        self.log.debug(f"Serializing user {self.username} to dict.")
+        log_debug_detailed(f"Serializing user {self.username} to dict.")
         return {
             "username": self.username,
             "password": self.password,

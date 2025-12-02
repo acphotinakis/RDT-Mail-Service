@@ -1,7 +1,7 @@
 import re
 
 
-from src.common.logger import get_class_logger
+from src.common.logger import *
 
 
 log = get_class_logger("MESSAGE_VIEW_QT")

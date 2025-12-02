@@ -1,6 +1,6 @@
 import socket
 from typing import List, Tuple
-from src.common.logger import get_class_logger
+from src.common.logger import *
 from src.config import Config
 from src.common.exceptions import POP3ConnectionError, POP3ProtocolError
 from src.rdt.rdt_sender import RDTSender
@@ -10,7 +10,7 @@ from src.rdt.rdt_dispatcher import RDTDispatcher
 
 class POP3Client:
     def __init__(self):
-        self.log = get_class_logger(self)
+
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
@@ -29,10 +29,10 @@ class POP3Client:
         self.rdt_receiver = RDTReceiver(dispatcher=self.dispatcher)
         self.receiver_gen = self.rdt_receiver.start_receiving()
 
-        self.log.info(
+        log_info_detailed(
             f"POP3 client initialized on {self.sock.getsockname()[0]}:{self.sock.getsockname()[1]}"
         )
-        self.log.info(self.to_string())
+        log_info_detailed(self.to_string())
 
     def _get_reply(self) -> str:
         try:
@@ -137,7 +137,7 @@ class POP3Client:
 
             return emails
         except Exception as e:
-            self.log.error(f"Error fetching messages: {e}")
+            log_error_detailed(f"Error fetching messages: {e}")
             return []
         finally:
             self.quit()

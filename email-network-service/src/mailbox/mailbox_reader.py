@@ -6,7 +6,7 @@ from typing import Dict, Optional, Tuple, List
 
 from src.auth.user import User
 from src.config import Config
-from src.common.logger import get_class_logger
+from src.common.logger import *
 
 
 class MailboxReader:
@@ -19,9 +19,9 @@ class MailboxReader:
     """
 
     def __init__(self):
-        self.log = get_class_logger(self)
-        self.log.info("MailboxReader initialized.")
-        self.log.info(self.to_string())
+
+        log_info_detailed("MailboxReader initialized.")
+        log_info_detailed(self.to_string())
 
     # Internal: Load metadata for a user
     def _load_metadata(self, metadata_path: str) -> Dict:
@@ -30,10 +30,10 @@ class MailboxReader:
 
         Returns empty structure if missing or corrupt.
         """
-        self.log.debug(f"Attempting to load metadata.json from: {metadata_path}")
+        log_debug_detailed(f"Attempting to load metadata.json from: {metadata_path}")
 
         if not os.path.exists(metadata_path):
-            self.log.warning(
+            log_warning_detailed(
                 f"metadata.json not found at {metadata_path}. "
                 "Returning empty metadata structure."
             )
@@ -44,13 +44,13 @@ class MailboxReader:
                 metadata = json.load(f)
 
             total_entries = len(metadata.get("messages", {}))
-            self.log.debug(
+            log_debug_detailed(
                 f"Successfully loaded metadata.json containing {total_entries} messages."
             )
             return metadata
 
         except Exception as e:
-            self.log.error(
+            log_error_detailed(
                 f"Failed to load metadata.json at {metadata_path}.\n"
                 f"Reason: {e}\n"
                 "Returning empty metadata structure."
@@ -68,13 +68,13 @@ class MailboxReader:
             - STAT (count & total size)
             - UIDL (UID listing)
         """
-        self.log.info(f"--- BEGIN MAILBOX LISTING transaction for user '{user.username}' ---")
+        log_info_detailed(f"--- BEGIN MAILBOX LISTING transaction for user '{user.username}' ---")
 
         user_dir = os.path.join(Config.MAILBOXES_DIR, user.username)
         metadata_path = os.path.join(user_dir, "metadata.json")
 
-        self.log.debug(f"Mailbox directory resolved: {user_dir}")
-        self.log.debug(f"Metadata path resolved: {metadata_path}")
+        log_debug_detailed(f"Mailbox directory resolved: {user_dir}")
+        log_debug_detailed(f"Metadata path resolved: {metadata_path}")
 
         metadata = self._load_metadata(metadata_path)
         messages = metadata.get("messages", {})
@@ -88,25 +88,25 @@ class MailboxReader:
             deleted = meta.get("deleted", False)
 
             if deleted:
-                self.log.debug(f"Skipping message '{filename}' (marked deleted).")
+                log_debug_detailed(f"Skipping message '{filename}' (marked deleted).")
                 continue
 
             listing.append((filename, size_bytes, uid))
             total_size += size_bytes
 
-            self.log.debug(
+            log_debug_detailed(
                 f"Included message:\n"
                 f"    filename: {filename}\n"
                 f"    UID: {uid}\n"
                 f"    size: {size_bytes} bytes"
             )
 
-        self.log.info(
+        log_info_detailed(
             f"Mailbox listing complete.\n"
             f"    Total visible messages: {len(listing)}\n"
             f"    Total size (bytes): {total_size}"
         )
-        self.log.info(f"--- END MAILBOX LISTING transaction for user '{user.username}' ---")
+        log_info_detailed(f"--- END MAILBOX LISTING transaction for user '{user.username}' ---")
 
         return listing
 
@@ -117,30 +117,30 @@ class MailboxReader:
 
         Used by POP3 RETR handler.
         """
-        self.log.info(
+        log_info_detailed(
             f"--- BEGIN READ MESSAGE for user '{user.username}' " f"(filename='{filename}') ---"
         )
 
         message_path = os.path.join(user.mailbox_path, filename)
 
-        self.log.debug(f"Resolved message path: {message_path}")
+        log_debug_detailed(f"Resolved message path: {message_path}")
 
         if not os.path.exists(message_path):
-            self.log.error(f"Requested message file does not exist at: {message_path}")
+            log_error_detailed(f"Requested message file does not exist at: {message_path}")
             return None
 
         try:
             with open(message_path, "r", encoding="utf-8") as f:
                 content = f.read()
 
-            self.log.info(
+            log_info_detailed(
                 f"Successfully loaded {len(content)} bytes " f"from message file '{filename}'."
             )
-            self.log.info(f"--- END READ MESSAGE for user '{user.username}' ---")
+            log_info_detailed(f"--- END READ MESSAGE for user '{user.username}' ---")
             return content
 
         except Exception as e:
-            self.log.error(
+            log_error_detailed(
                 f"Failed to read message '{filename}' from disk.\n"
                 f"Path: {message_path}\n"
                 f"Reason: {e}"
@@ -153,7 +153,7 @@ class MailboxReader:
         """
         Returns the UID associated with a message file.
         """
-        self.log.debug(f"Looking up UID for user '{user.username}', filename='{filename}'.")
+        log_debug_detailed(f"Looking up UID for user '{user.username}', filename='{filename}'.")
 
         metadata_path = os.path.join(user.mailbox_path, "metadata.json")
 
@@ -161,11 +161,11 @@ class MailboxReader:
         message_meta = metadata.get("messages", {}).get(filename)
 
         if not message_meta:
-            self.log.error(f"Unable to find metadata entry for filename '{filename}'.")
+            log_error_detailed(f"Unable to find metadata entry for filename '{filename}'.")
             return None
 
         uid = message_meta.get("uid")
-        self.log.debug(f"Retrieved UID '{uid}' for filename '{filename}'.")
+        log_debug_detailed(f"Retrieved UID '{uid}' for filename '{filename}'.")
         return uid
 
     def to_string(self) -> str:
@@ -174,7 +174,6 @@ class MailboxReader:
         """
         props = {
             "Class": self.__class__.__name__,
-            "Logger Name": self.log.name,
             "Readable Mailbox Root": Config.MAILBOXES_DIR,
             "Temp Directory": Config.TEMP_EMAILS_DIR,
         }

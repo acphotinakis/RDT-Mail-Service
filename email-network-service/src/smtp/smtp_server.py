@@ -8,7 +8,7 @@ from concurrent.futures import ThreadPoolExecutor
 from email.parser import BytesParser
 from email.policy import default as email_policy
 
-from src.common.logger import get_class_logger
+from src.common.logger import *
 from src.rdt.rdt_receiver import RDTReceiver
 from src.rdt.rdt_sender import RDTSender
 from src.rdt.rdt_dispatcher import RDTDispatcher
@@ -42,8 +42,8 @@ def _parse_angle_addr(arg: str) -> Optional[str]:
 class SMTPServer:
 
     def __init__(self, host: str, port: int):
-        self.log = get_class_logger(self)
-        self.log.info("Initializing SMTP server module...")
+
+        log_info_detailed("Initializing SMTP server module...")
 
         self.host = host
         self.port = port
@@ -59,13 +59,13 @@ class SMTPServer:
         self._running = False
         self._thread = None
 
-        self.log.info(f"SMTP server initialized on {self.host}:{self.port}")
-        self.log.info(self.to_string())
+        log_info_detailed(f"SMTP server initialized on {self.host}:{self.port}")
+        log_info_detailed(self.to_string())
 
     def _get_sender(self, addr: Tuple[str, int]) -> RDTSender:
         if addr not in self._senders:
             host, port = addr
-            self.log.debug(f"Allocating new RDTSender for {addr}")
+            log_debug_detailed(f"Allocating new RDTSender for {addr}")
             self._senders[addr] = RDTSender(host, port, self.dispatcher)
         return self._senders[addr]
 
@@ -76,11 +76,11 @@ class SMTPServer:
         try:
             sender = self._get_sender(addr)
             sender.send(msg.encode("ascii"))
-            self.log.debug(f"[SMTP → {addr}] {msg.strip()}")
+            log_debug_detailed(f"[SMTP → {addr}] {msg.strip()}")
         except ConnectionError:
-            self.log.error(f"Failed to send reply to {addr}. Client likely disconnected.")
+            log_error_detailed(f"Failed to send reply to {addr}. Client likely disconnected.")
         except Exception as e:
-            self.log.exception(f"Unexpected error sending reply to {addr}: {e}")
+            log_error_detailed(f"Unexpected error sending reply to {addr}: {e}")
 
     def _create_session(self) -> Dict[str, Any]:
         return {
@@ -99,7 +99,7 @@ class SMTPServer:
         It ensures memory is freed and the RDT layer is reset for that address.
         """
         if addr in sessions:
-            self.log.info(f"Cleaning up session for {addr}")
+            log_info_detailed(f"Cleaning up session for {addr}")
             del sessions[addr]
 
         if addr in last_activity:
@@ -121,7 +121,7 @@ class SMTPServer:
         preventing disk I/O (like saving emails) from blocking the main network loop.
         It also implements a 'reaper' strategy to clean up inactive sessions.
         """
-        self.log.info("SMTP serve loop running...")
+        log_info_detailed("SMTP serve loop running...")
 
         self.dispatcher.start()
 
@@ -143,7 +143,7 @@ class SMTPServer:
                 try:
                     data, addr = packet
                 except Exception:
-                    self.log.error("Invalid packet received (missing sender address).")
+                    log_error_detailed("Invalid packet received (missing sender address).")
                     continue
 
                 # 1. Update Session Activity
@@ -159,14 +159,14 @@ class SMTPServer:
                 ]
 
                 for stale in stale_addrs:
-                    self.log.warning(f"Session timed out for client {stale}")
+                    log_warning_detailed(f"Session timed out for client {stale}")
                     self._cleanup_session(stale, sessions, last_activity)
 
                 # 3. Session Initialization
                 if addr not in sessions:
                     sessions[addr] = self._create_session()
                     self._send_reply(addr, "220 Welcome Simple SMTP Server")
-                    self.log.info(f"New SMTP session created for client {addr}")
+                    log_info_detailed(f"New SMTP session created for client {addr}")
 
                 # 4. Dispatch Processing to Worker Thread
                 # We submit the work to the pool so the main loop can immediately
@@ -174,7 +174,7 @@ class SMTPServer:
                 executor.submit(self._process_packet, addr, data, sessions)
 
         self._cleanup_senders()
-        self.log.info("SMTP serve loop fully terminated.")
+        log_info_detailed("SMTP serve loop fully terminated.")
 
     def _process_packet(self, addr, data, sessions):
         """
@@ -188,7 +188,7 @@ class SMTPServer:
         session = sessions[addr]
 
         try:
-            self.log.debug(f"Received {len(data)} bytes from {addr}")
+            log_debug_detailed(f"Received {len(data)} bytes from {addr}")
 
             if session["state"] == SMTPState.READING_DATA_STREAM:
                 self._handle_data_stream(addr, session, data)
@@ -196,7 +196,7 @@ class SMTPServer:
                 self._handle_command_stream(addr, session, data, sessions)
 
         except Exception as e:
-            self.log.exception(f"Error processing packet for {addr}: {e}")
+            log_error_detailed(f"Error processing packet for {addr}: {e}")
             self._send_reply(addr, "500 Internal Server Error")
 
     def _handle_data_stream(self, addr, session, data):
@@ -236,7 +236,7 @@ class SMTPServer:
             user = user_manager.get_user(username)
 
             if not user:
-                self.log.warning(f"Rejected mail for unknown user: {username}")
+                log_warning_detailed(f"Rejected mail for unknown user: {username}")
                 self._send_reply(addr, "550 No such user")
                 return
 
@@ -259,7 +259,7 @@ class SMTPServer:
                 self._send_reply(addr, "451 Local processing error")
 
         except Exception as e:
-            self.log.exception(f"Error finalizing email DATA block: {e}")
+            log_error_detailed(f"Error finalizing email DATA block: {e}")
             self._send_reply(addr, "451 Error processing message")
 
     def _handle_command_stream(self, addr, session, data, sessions):
@@ -279,7 +279,7 @@ class SMTPServer:
             except Exception:
                 cmd_str = ""
 
-            self.log.debug(f"[SMTP CMD from {addr}] {cmd_str!r}")
+            log_debug_detailed(f"[SMTP CMD from {addr}] {cmd_str!r}")
 
             m = _re_cmd.match(cmd_str)
             if not m:
@@ -364,7 +364,7 @@ class SMTPServer:
             target=self._serve_loop, name="smtp-serve-loop", daemon=True
         )
         self._thread.start()
-        self.log.info("SMTP server started.")
+        log_info_detailed("SMTP server started.")
 
     def stop(self):
         if not self._running:
@@ -374,11 +374,11 @@ class SMTPServer:
         try:
             self.dispatcher.stop()
         except Exception:
-            self.log.exception("Error stopping Dispatcher")
+            log_error_detailed("Error stopping Dispatcher")
 
         if self._thread:
             self._thread.join(timeout=2.0)
-        self.log.info("SMTP server stopped.")
+        log_info_detailed("SMTP server stopped.")
 
     def to_string(self) -> str:
         """

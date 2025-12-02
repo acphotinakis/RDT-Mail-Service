@@ -3,7 +3,7 @@ import os
 from typing import Optional, Tuple
 from src.config import Config
 
-from src.common.logger import get_class_logger
+from src.common.logger import *
 
 log = get_class_logger("STORAGE_WRAPPER_QT")
 

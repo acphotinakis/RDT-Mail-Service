@@ -1,5 +1,5 @@
 import os
-from src.common.logger import get_class_logger
+from src.common.logger import *
 
 
 class Config:
@@ -91,12 +91,11 @@ class Config:
     @classmethod
     def log_config(cls):
         """Log all configuration values."""
-        log = get_class_logger(cls)
-        log.info("=== Application Configuration ===")
+        log_info_detailed("=== Application Configuration ===")
 
         for attr in dir(cls):
             if not attr.startswith("_") and attr.isupper():
                 value = getattr(cls, attr)
-                log.info(f"{attr}: {value}")
+                log_info_detailed(f"{attr}: {value}")
 
-        log.info("=================================")
+        log_info_detailed("=================================")

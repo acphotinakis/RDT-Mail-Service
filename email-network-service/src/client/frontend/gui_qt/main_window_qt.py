@@ -21,7 +21,7 @@ from src.client.frontend.controllers.app_controller_rich import AppController, V
 from src.client.frontend.gui_qt.compose_dialog_qt import ComposeDialog
 from src.client.frontend.gui_qt.message_view_qt import render_html_to_text
 from src.models.email_data import EmailData
-from src.common.logger import get_class_logger
+from src.common.logger import *
 
 
 # --------------------------------------------------------------------------
@@ -37,7 +37,6 @@ class MainWindowQt(QMainWindow, ViewInterface):
         self.setWindowTitle("Email Client")
         self.resize(1280, 800)
 
-        self.log = get_class_logger(self)
         self.emails: List[EmailData] = []
         self.selected_email_index: Optional[int] = None
 

@@ -1,7 +1,7 @@
 import threading
 from typing import Optional, Tuple, Dict, Any, List
 
-from src.common.logger import get_class_logger
+from src.common.logger import *
 from src.rdt.rdt_receiver import RDTReceiver
 from src.rdt.rdt_sender import RDTSender
 from src.rdt.rdt_dispatcher import RDTDispatcher
@@ -14,8 +14,8 @@ import time
 
 class POP3Server:
     def __init__(self, host: str, port: int):
-        self.log = get_class_logger(self)
-        self.log.info("Initializing POP3 server module...")
+
+        log_info_detailed("Initializing POP3 server module...")
         self.host = host
         self.port = port
 
@@ -31,13 +31,13 @@ class POP3Server:
         self._running = False
         self._thread: Optional[threading.Thread] = None
 
-        self.log.info(f"POP3 server initialized on {self.host}:{self.port}")
-        self.log.info(self.to_string())
+        log_info_detailed(f"POP3 server initialized on {self.host}:{self.port}")
+        log_info_detailed(self.to_string())
 
     def _get_sender(self, addr: Tuple[str, int]) -> RDTSender:
         if addr not in self._senders:
             host, port = addr
-            self.log.debug(f"Allocating new RDTSender for {addr}")
+            log_debug_detailed(f"Allocating new RDTSender for {addr}")
             self._senders[addr] = RDTSender(host, port, self.dispatcher)
         return self._senders[addr]
 
@@ -47,11 +47,11 @@ class POP3Server:
         try:
             sender = self._get_sender(addr)
             sender.send(msg.encode("ascii", errors="replace"))
-            self.log.debug(f"[POP3 → {addr}] {msg.strip()}")
+            log_debug_detailed(f"[POP3 → {addr}] {msg.strip()}")
         except ConnectionError:
-            self.log.error(f"Failed to reply to {addr}. Connection lost.")
+            log_error_detailed(f"Failed to reply to {addr}. Connection lost.")
         except Exception as e:
-            self.log.exception(f"Error sending POP3 reply to {addr}: {e}")
+            log_error_detailed(f"Error sending POP3 reply to {addr}: {e}")
 
     def _create_session(self) -> Dict[str, Any]:
         return {
@@ -61,7 +61,7 @@ class POP3Server:
         }
 
     def _serve_loop(self):
-        self.log.info("POP3 serve loop running...")
+        log_info_detailed("POP3 serve loop running...")
 
         self.dispatcher.start()
 
@@ -79,14 +79,14 @@ class POP3Server:
             if addr not in sessions:
                 sessions[addr] = self._create_session()
                 self._send_reply(addr, "+OK POP3 server ready")
-                self.log.info(f"New POP3 session created for client {addr}")
+                log_info_detailed(f"New POP3 session created for client {addr}")
 
             session = sessions[addr]
             lines = data.decode("ascii", errors="ignore").split("\r\n")
             for line in lines:
                 if not line:
                     continue
-                self.log.debug(f"[POP3 CMD from {addr}] {line!r}")
+                log_debug_detailed(f"[POP3 CMD from {addr}] {line!r}")
                 self._handle_command(addr, session, line, sessions)
 
     def _handle_command(self, addr, session, line, sessions):
@@ -231,7 +231,7 @@ class POP3Server:
             target=self._serve_loop, name="pop3-serve-loop", daemon=True
         )
         self._thread.start()
-        self.log.info("POP3 server started.")
+        log_info_detailed("POP3 server started.")
 
     def stop(self):
         if not self._running:
@@ -240,10 +240,10 @@ class POP3Server:
         try:
             self.dispatcher.stop()
         except Exception:
-            self.log.exception("Error stopping Dispatcher")
+            log_error_detailed("Error stopping Dispatcher")
         if self._thread:
             self._thread.join(timeout=2.0)
-        self.log.info("POP3 server stopped.")
+        log_info_detailed("POP3 server stopped.")
 
     def to_string(self) -> str:
         """

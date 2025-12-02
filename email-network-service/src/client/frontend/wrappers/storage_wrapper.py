@@ -6,7 +6,7 @@ from email import message_from_string
 from src.models.email_data import EmailData
 from src.mailbox.storage_manager import StorageManager
 from src.auth.user import User
-from src.common.logger import get_class_logger
+from src.common.logger import *
 
 
 log = get_class_logger("STORAGE_WRAPPER_QT")
@@ -75,49 +75,49 @@ def _parse_email_file(uid: str, content: str) -> Optional[EmailData]:
 
 class StorageWrapper:
     def __init__(self):
-        self.log = get_class_logger(self)
+
         self.storage_manager = StorageManager()
-        self.log.info("StorageWrapper initialized.")
+        log_info_detailed("StorageWrapper initialized.")
 
     def list_emails(self, user: str) -> List[EmailData]:
-        self.log.info(f"Listing emails for user: {user}")
+        log_info_detailed(f"Listing emails for user: {user}")
         user_obj = User(user)
         messages = self.storage_manager.list_messages(user_obj)
         emails = []
-        self.log.debug(f"Found {len(messages)} messages in storage for user {user}.")
+        log_debug_detailed(f"Found {len(messages)} messages in storage for user {user}.")
 
         for filename, _, uid in messages:
-            self.log.debug(f"Reading content of message '{filename}' with UID '{uid}'.")
+            log_debug_detailed(f"Reading content of message '{filename}' with UID '{uid}'.")
             content = self.storage_manager.get_message_content(user_obj, filename)
             if content:
                 parsed = _parse_email_file(uid, content)
                 if parsed:
                     emails.append(parsed)
             else:
-                self.log.warning(f"Could not read content for message '{filename}'.")
+                log_warning_detailed(f"Could not read content for message '{filename}'.")
 
-        self.log.info(f"Listed {len(emails)} emails for user: {user}")
+        log_info_detailed(f"Listed {len(emails)} emails for user: {user}")
         return emails
 
     def save_email(self, user: str, content: str) -> Optional[str]:
-        self.log.info(f"Saving new email for user: {user}")
+        log_info_detailed(f"Saving new email for user: {user}")
         parsed = _parse_email_file("", content)
         if not parsed:
-            self.log.error("Failed to parse email for saving.")
+            log_error_detailed("Failed to parse email for saving.")
             return None
 
         user_obj = User(user)
         path = self.storage_manager.save_email(user_obj, parsed)
         if path:
             filename = os.path.basename(path)
-            self.log.info(f"Email saved for user {user} with filename: {filename}")
+            log_info_detailed(f"Email saved for user {user} with filename: {filename}")
             return filename
         else:
-            self.log.error(f"Failed to save email for user {user}.")
+            log_error_detailed(f"Failed to save email for user {user}.")
             return None
 
     def delete_email(self, user: str, uid: str) -> bool:
-        self.log.info(f"Attempting to delete email with UID: {uid} for user: {user}")
+        log_info_detailed(f"Attempting to delete email with UID: {uid} for user: {user}")
         user_obj = User(user)
         messages = self.storage_manager.list_messages(user_obj)
 
@@ -125,17 +125,19 @@ class StorageWrapper:
         for filename, _, msg_uid in messages:
             if msg_uid == uid:
                 filename_to_delete = filename
-                self.log.debug(f"Found match: UID '{uid}' corresponds to filename '{filename}'.")
+                log_debug_detailed(
+                    f"Found match: UID '{uid}' corresponds to filename '{filename}'."
+                )
                 break
 
         if filename_to_delete:
-            self.log.debug(f"Calling storage manager to delete '{filename_to_delete}'.")
+            log_debug_detailed(f"Calling storage manager to delete '{filename_to_delete}'.")
             deleted = self.storage_manager.delete_email(user_obj, filename_to_delete)
             if deleted:
-                self.log.info(f"Successfully deleted email with UID: {uid}")
+                log_info_detailed(f"Successfully deleted email with UID: {uid}")
             else:
-                self.log.error(f"Storage manager failed to delete email with UID: {uid}")
+                log_error_detailed(f"Storage manager failed to delete email with UID: {uid}")
             return deleted
         else:
-            self.log.warning(f"Could not find email with UID '{uid}' to delete.")
+            log_warning_detailed(f"Could not find email with UID '{uid}' to delete.")
             return False

@@ -1,9 +1,8 @@
 # src/rdt/rdt_packet.py
 import struct
 import zlib
-from src.common.logger import get_class_logger
+from src.common.logger import *
 
-log = get_class_logger("RDT_PACKET")
 
 # --- Packet Constants ---
 TYPE_DATA = 0
@@ -11,15 +10,17 @@ TYPE_ACK = 1
 HEADER_FORMAT = "!BBI"  # Seq (1B), Type (1B), Checksum (4B)
 HEADER_SIZE = struct.calcsize(HEADER_FORMAT)
 
+
 def calculate_checksum(data: bytes) -> int:
     """
     Computes the CRC32 checksum for the given data.
     Ensures the result is an unsigned 32-bit integer (0 to 2^32-1).
     """
-    log.debug(f"Calculating checksum for data of length {len(data)} bytes.")
+    log_debug_detailed(f"Calculating checksum for data of length {len(data)} bytes.")
     checksum = zlib.crc32(data) & 0xFFFFFFFF
-    log.debug(f"Checksum calculated: {checksum}")
+    log_debug_detailed(f"Checksum calculated: {checksum}")
     return checksum
+
 
 def make_packet(seq_num: int, is_ack: bool, payload: bytes) -> bytes:
     """
@@ -54,7 +55,7 @@ def unpack_and_validate(packet_bytes: bytes) -> dict | None:
     compatible with the rest of the application.
     """
     if len(packet_bytes) < HEADER_SIZE:
-        log.warning(f"Packet too short: {len(packet_bytes)} bytes.")
+        log_warning_detailed(f"Packet too short: {len(packet_bytes)} bytes.")
         return None
 
     try:
@@ -71,7 +72,7 @@ def unpack_and_validate(packet_bytes: bytes) -> dict | None:
         calculated_checksum = calculate_checksum(clean_header + payload)
 
         if received_checksum != calculated_checksum:
-            log.warning(
+            log_warning_detailed(
                 f"Checksum mismatch! Got {received_checksum}, expected {calculated_checksum}"
             )
             return None
@@ -85,5 +86,5 @@ def unpack_and_validate(packet_bytes: bytes) -> dict | None:
         }
 
     except struct.error as e:
-        log.error(f"Packet structure error: {e}")
+        log_error_detailed(f"Packet structure error: {e}")
         return None

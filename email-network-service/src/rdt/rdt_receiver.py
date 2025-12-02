@@ -1,6 +1,6 @@
 import socket
 from typing import Dict, Tuple, TYPE_CHECKING
-from src.common.logger import get_class_logger
+from src.common.logger import *
 from src.rdt.rdt_packet import make_ack_packet
 
 if TYPE_CHECKING:
@@ -14,7 +14,7 @@ class RDTReceiver:
     """
 
     def __init__(self, dispatcher: "RDTDispatcher"):
-        self.log = get_class_logger(self)
+
         self.dispatcher = dispatcher
         self.sock = dispatcher.sock
 
@@ -25,16 +25,16 @@ class RDTReceiver:
         self.expected_seqs: Dict[Tuple[str, int], int] = {}
         self.running = True
 
-        self.log.info(
+        log_info_detailed(
             f"RDT Receiver initialized on {self.sock.getsockname()[0]}:{self.sock.getsockname()[1]}"
         )
-        self.log.info(self.to_string())
+        log_info_detailed(self.to_string())
 
     def start_receiving(self):
         """
         Generator that yields (valid_data_bytes, sender_addr).
         """
-        self.log.info("Receiver: Listening for incoming packets...")
+        log_info_detailed("Receiver: Listening for incoming packets...")
 
         while self.running:
             # 1. Get next packet from Dispatcher Queue
@@ -51,7 +51,7 @@ class RDTReceiver:
             if rcvpkt["seq"] != expected:
                 # Duplicate/Out-of-order: Resend ACK for the LAST correctly received packet
                 last_correct_seq = 1 - expected
-                self.log.debug(
+                log_debug_detailed(
                     f"Receiver: Unexpected SEQ {rcvpkt['seq']} from {sender_addr}. "
                     f"Expected {expected}. Resending ACK {last_correct_seq}."
                 )
@@ -60,7 +60,7 @@ class RDTReceiver:
                 continue
 
             # 3. Good Packet Received
-            self.log.debug(f"Receiver: Accepted SEQ {expected} from {sender_addr}.")
+            log_debug_detailed(f"Receiver: Accepted SEQ {expected} from {sender_addr}.")
 
             # Send ACK for current packet
             sndpkt = make_ack_packet(expected)

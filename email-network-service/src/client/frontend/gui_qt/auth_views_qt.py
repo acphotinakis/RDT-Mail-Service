@@ -7,7 +7,7 @@ from PySide6.QtWidgets import (
     QLabel,
     QVBoxLayout,
 )
-from src.common.logger import get_class_logger
+from src.common.logger import *
 
 
 class LoginDialog(QDialog):
@@ -15,7 +15,7 @@ class LoginDialog(QDialog):
 
     def __init__(self, error_message: Optional[str] = None, parent=None):
         super().__init__(parent)
-        self.log = get_class_logger(self)
+
         self.result_data: Optional[Tuple[str, str]] = None
         self.setWindowTitle("Login")
         self.resize(360, 200)
@@ -45,27 +45,27 @@ class LoginDialog(QDialog):
         buttons.accepted.connect(self._on_accept)
         buttons.rejected.connect(self.reject)
         layout.addWidget(buttons)
-        self.log.info("LoginDialog initialized.")
+        log_info_detailed("LoginDialog initialized.")
 
     def _on_accept(self):
         username = self.username_edit.text().strip()
         password = self.password_edit.text().strip()
 
         if not username or not password:
-            self.log.warning("Login attempt with empty fields.")
+            log_warning_detailed("Login attempt with empty fields.")
             self.error_label.setText("Both fields are required.")
             return
 
-        self.log.info(f"Login attempt for user: {username}")
+        log_info_detailed(f"Login attempt for user: {username}")
         self.result_data = (username, password)
         self.accept()
 
     def get_data(self) -> Optional[Tuple[str, str]]:
-        self.log.debug("Showing login dialog.")
+        log_debug_detailed("Showing login dialog.")
         if self.exec() == QDialog.DialogCode.Accepted:
-            self.log.info("Login dialog accepted.")
+            log_info_detailed("Login dialog accepted.")
             return self.result_data
-        self.log.info("Login dialog cancelled.")
+        log_info_detailed("Login dialog cancelled.")
         return None
 
 
@@ -74,7 +74,7 @@ class SignupDialog(QDialog):
 
     def __init__(self, error_message: Optional[str] = None, parent=None):
         super().__init__(parent)
-        self.log = get_class_logger(self)
+
         self.result_data: Optional[Dict[str, str]] = None
         self.setWindowTitle("Sign Up")
         self.resize(360, 240)
@@ -108,7 +108,7 @@ class SignupDialog(QDialog):
         buttons.accepted.connect(self._on_accept)
         buttons.rejected.connect(self.reject)
         layout.addWidget(buttons)
-        self.log.info("SignupDialog initialized.")
+        log_info_detailed("SignupDialog initialized.")
 
     def _on_accept(self):
         username = self.username_edit.text().strip()
@@ -116,23 +116,23 @@ class SignupDialog(QDialog):
         confirm = self.confirm_edit.text().strip()
 
         if not username or not password or not confirm:
-            self.log.warning("Signup attempt with empty fields.")
+            log_warning_detailed("Signup attempt with empty fields.")
             self.error_label.setText("All fields are required.")
             return
 
         if password != confirm:
-            self.log.warning("Signup attempt with non-matching passwords.")
+            log_warning_detailed("Signup attempt with non-matching passwords.")
             self.error_label.setText("Passwords do not match.")
             return
 
-        self.log.info(f"Signup attempt for new user: {username}")
+        log_info_detailed(f"Signup attempt for new user: {username}")
         self.result_data = {"user": username, "password": password}
         self.accept()
 
     def get_data(self) -> Optional[Dict[str, str]]:
-        self.log.debug("Showing signup dialog.")
+        log_debug_detailed("Showing signup dialog.")
         if self.exec() == QDialog.DialogCode.Accepted:
-            self.log.info("Signup dialog accepted.")
+            log_info_detailed("Signup dialog accepted.")
             return self.result_data
-        self.log.info("Signup dialog cancelled.")
+        log_info_detailed("Signup dialog cancelled.")
         return None
