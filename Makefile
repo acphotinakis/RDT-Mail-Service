@@ -1,125 +1,43 @@
-# ---------------------------
-# User must provide:
-#   make venv PYTHON=/path/to/python3.11
-# ---------------------------
+# -----------------------------
+# Simulation Defaults (can be overridden)
+# -----------------------------
+NUM_USERS ?= 2
+NUM_EMAILS ?= 1
+CONCURRENCY ?= 10
+DELAY ?= 0.2
+MESSAGE_SIZE ?= 200
 
-VENV_DIR := .venv
-PYTHON_FILE := .venv_python_path
-VENV_PY := $(VENV_DIR)/bin/python
 
-# Get the Python executable
-ifeq ($(wildcard $(PYTHON_FILE)),)
-    # If file doesn't exist, require user to pass PYTHON=
-    ifndef PYTHON
-        $(error You must specify the Python executable, e.g.: make venv PYTHON=/usr/bin/python3.11)
-    endif
-else
-    PYTHON := $(shell cat $(PYTHON_FILE))
-endif
-
-# Rule: ensure Python version is >= 3.11
-check_python:
-	@echo "Checking Python version for: $(PYTHON)"
-	@if ! $(PYTHON) -c 'import sys; exit(0 if sys.version_info >= (3,11) else 1)'; then \
-		echo "Error: Python must be version 3.11 or newer."; \
-		exit 1; \
-	fi
-	@echo "Python version OK."
-
-# Create venv using user-supplied Python
-venv: check_python
-	@echo "Creating venv using $(PYTHON)"
-	$(PYTHON) -m venv $(VENV_DIR)
-	@echo $(PYTHON) > $(PYTHON_FILE)
-	@echo "Virtual environment created at $(VENV_DIR)."
-	@echo "Saved Python path to $(PYTHON_FILE)."
-	@echo "Run: source $(VENV_DIR)/bin/activate"
-
-# Install dependencies
-install:
-	@if [ ! -d "$(VENV_DIR)" ]; then \
-		echo "Error: venv missing. Run: make venv PYTHON=/path/to/python3.11"; \
-		exit 1; \
-	fi
-	$(VENV_PY) -m pip install --upgrade pip
-	$(VENV_PY) -m pip install -r requirements.txt
-
-# Regenerate requirements.txt (MUST use venv)
+# Regenerate requirements.txt
 freeze:
-	@if [ ! -d "$(VENV_DIR)" ]; then \
-		echo "Error: venv missing. Run: make venv PYTHON=/path/to/python3.11"; \
-		exit 1; \
-	fi
-	$(VENV_PY) -m pip freeze > requirements.txt
+	python3 -m pip freeze > requirements.txt
 	@echo "Updated requirements.txt"
 
 # Run the program
 run:
-	@if [ ! -d "$(VENV_DIR)" ]; then \
-		echo "Error: venv missing. Run: make venv PYTHON=/path/to/python3.11"; \
-		exit 1; \
-	fi
-	$(VENV_PY) -m src.main
+	python3 -m email-network-service.src.simulation \
+		--num_users $(NUM_USERS) \
+		--num_emails $(NUM_EMAILS) \
+		--concurrency $(CONCURRENCY) \
+		--delay_between_sends $(DELAY) \
+		--message_size $(MESSAGE_SIZE)
 
-
-# Build Sphinx docs
-sphinx_docs:
-	@if [ ! -d "$(VENV_DIR)" ]; then \
-		echo "Error: venv missing. Run: make venv PYTHON=/path/to/python3.11"; \
-		exit 1; \
-	fi
-	$(VENV_PY) -m sphinx -b html docs/ docs/_build/html
-	@echo "Docs built at docs/_build/html"
-
-# Generate revisions.txt (git log)
-revisions:
-	git log > revisions.txt
-	@echo "Revisions written to revisions.txt"
 
 # Clean build output and venv
 clean:
-	rm -rf $(VENV_DIR)
-	rm -rf docs/_build
-	rm -f revisions.txt
+	@echo "Clearing email database..."
+	@find email-network-service/database/mailboxes -type f -name "*.msg" -delete
+	@find email-network-service/database/mailboxes -type f -name "metadata.json" -delete
+	@find email-network-service/database/temp -mindepth 1 -delete
+	@rm -f email-network-service/database/users.json
+	@echo "Recreating metadata directories..."
+	@find email-network-service/database/mailboxes -type d -exec touch {}/metadata.json \;
+	@echo "Database cleared and reset."
 	@echo "Cleaned."
 
 format:
-	@if [ ! -d "$(VENV_DIR)" ]; then \
-		echo "Error: venv missing. Run: make venv PYTHON=/path/to/python3.11"; \
-		exit 1; \
-	fi
-	$(VENV_PY) -m black src tests
+	python3 -m black email-network-service/src 
 	@echo "Code formatted with black."
 
-coverage:
-	@if [ ! -d "$(VENV_DIR)" ]; then \
-		echo "Error: venv missing. Run: make venv PYTHON=/path/to/python3.11"; \
-		exit 1; \
-	fi
-	$(VENV_PY) -m pytest --cov=src --cov-report=html
-	@echo "Coverage report generated at htmlcov/index.html"
 
-
-sync_repo:
-	@set -e; \
-	read -p "Enter commit message: " msg; \
-	if [ -z "$$msg" ]; then \
-		echo "Aborting: commit message cannot be empty."; \
-		exit 1; \
-	fi; \
-	make revisions; \
-	git add .; \
-	git commit -m "$$msg"; \
-	git push;
-
-
-setup:
-	chmod +x setup-project.sh
-	./setup-project.sh
-
-
-clean_setup:
-	rm -rf email-network-service
-
-
-.PHONY: venv install freeze run sphinx_docs clean revisions check_python format coverage sync_repo setup
+.PHONY: freeze run clean format

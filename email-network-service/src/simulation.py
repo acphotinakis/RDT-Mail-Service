@@ -83,25 +83,25 @@ class SimulationStats:
         if duration <= 0:
             duration = 0.001
 
-        print("\n" + "=" * 60)
-        print(f"             SIMULATION RESULTS ({duration:.2f}s)")
-        print("=" * 60)
-        print(f"SMTP Traffic:")
-        print(f"  • Attempts:       {self.smtp_attempts}")
-        print(f"  • Success:        {self.smtp_success}")
-        print(f"  • Failed:         {self.smtp_failed}")
-        print(
+        log_info_detailed("\n" + "=" * 60)
+        log_info_detailed(f"             SIMULATION RESULTS ({duration:.2f}s)")
+        log_info_detailed("=" * 60)
+        log_info_detailed(f"SMTP Traffic:")
+        log_info_detailed(f"  • Attempts:       {self.smtp_attempts}")
+        log_info_detailed(f"  • Success:        {self.smtp_success}")
+        log_info_detailed(f"  • Failed:         {self.smtp_failed}")
+        log_info_detailed(
             f"  • Success Rate:   {(self.smtp_success/self.smtp_attempts)*100:.1f}%"
             if self.smtp_attempts
             else "  • Success Rate:   N/A"
         )
-        print(f"  • Throughput:     {self.smtp_success/duration:.2f} messages/sec")
-        print(f"  • Data Volume:    {self.bytes_sent / 1024:.2f} KB")
-        print("-" * 60)
-        print(f"POP3 Integrity:")
-        print(f"  • Verified:       {self.pop3_verified}")
-        print(f"  • Missing:        {self.pop3_missing}")
-        print("=" * 60 + "\n")
+        log_info_detailed(f"  • Throughput:     {self.smtp_success/duration:.2f} messages/sec")
+        log_info_detailed(f"  • Data Volume:    {self.bytes_sent / 1024:.2f} KB")
+        log_info_detailed("-" * 60)
+        log_info_detailed(f"POP3 Integrity:")
+        log_info_detailed(f"  • Verified:       {self.pop3_verified}")
+        log_info_detailed(f"  • Missing:        {self.pop3_missing}")
+        log_info_detailed("=" * 60 + "\n")
 
 
 class Simulation:
@@ -239,40 +239,66 @@ class Simulation:
     # ================================================================
     def run_pop3_integrity_check(self):
         """
-        Ensures messages that were sent exist in mailbox via POP3.
+        Run POP3 verification in parallel using ThreadPoolExecutor.
+        Each user’s mailbox is checked concurrently.
         """
-        log_info_detailed("=== PHASE 4: POP3 Consistency Verification ===")
+        log_info_detailed("=== PHASE 4: POP3 Consistency Verification (PARALLEL) ===")
 
         def extract_subject(raw_text):
             for line in raw_text.splitlines():
                 if line.lower().startswith("subject:"):
                     return line[8:].strip()
-            return ""
+                return ""
 
-        for user in self.users:
-            log_info_detailed(f"[POP3] Checking mailbox of {user.username}")
+        def _verify_user_mailbox(user):
+            try:
+                log_info_detailed(f"[POP3] Checking mailbox of {user.username}")
 
-            client = POP3Client()
-            raw_messages = client.get_all_messages(user.username, "password")
+                client = POP3Client()
+                raw_messages = client.get_all_messages(user.username, "password")
 
-            # Parse subjects from raw email strings
-            received_subjects = {extract_subject(msg) for msg in raw_messages}
+                received_subjects = {extract_subject(msg) for msg in raw_messages}
 
-            # Look for matching subjects
-            for sender, recipient, subject, _ in self.sent_messages:
-                # Compare exact local parts to avoid user1/user10 prefix collisions
-                recipient_local = recipient.split("@")[0].lower()
-                if recipient_local == user.username.lower():
-                    if subject in received_subjects:
-                        log_info_detailed(f"  Verified: {subject}")
-                        self.stats.record_pop3(True)
-                    else:
-                        log_error_detailed(
-                            f"  MISSING: {subject} (Expected in {user.username}'s inbox)"
-                        )
-                        self.stats.record_pop3(False)
+                # Look for matching subjects in sent_messages
+                for sender, recipient, subject, _ in self.sent_messages:
+                    recipient_local = recipient.split("@")[0].lower()
+                    if recipient_local == user.username.lower():
+                        if subject in received_subjects:
+                            log_info_detailed(f"  Verified: {subject}")
+                            self.stats.record_pop3(True)
+                        else:
+                            log_error_detailed(
+                                f"  MISSING: {subject} (Expected in {user.username}'s inbox)"
+                            )
+                            self.stats.record_pop3(False)
 
-        log_info_detailed("POP3 verification completed.")
+                return True
+
+            except Exception as e:
+                log_error_detailed(f"[POP3 THREAD ERROR for {user.username}]: {e}", exc_info=True)
+                self.stats.record_pop3(False)
+                return False
+
+        # Run POP3 checks in parallel
+        with ThreadPoolExecutor(max_workers=self.concurrency) as pool:
+            futures = {
+                pool.submit(_verify_user_mailbox, user): user.username for user in self.users
+            }
+
+            completed = 0
+            total = len(futures)
+
+            for future in futures:
+                try:
+                    future.result()
+                    completed += 1
+                    log_info_detailed(
+                        f"[POP3] Progress: {completed}/{total} ({completed/total*100:.1f}%)"
+                    )
+                except Exception as e:
+                    log_error_detailed(f"[POP3] ERROR processing user mailbox: {e}", exc_info=True)
+
+        log_info_detailed("POP3 verification completed (parallel mode).")
 
     def run_email_simulation(self):
         log_info_detailed(
@@ -393,7 +419,7 @@ class Simulation:
         self.run_pop3_integrity_check()
         self.stop_servers()
 
-        # Print Final Stats
+        # log_info_detailed Final Stats
         self.stats.print_summary()
 
     def to_string(self) -> str:
@@ -500,7 +526,7 @@ def main():
     try:
         sim.run()
     except KeyboardInterrupt:
-        print("Simulation interrupted.")
+        log_info_detailed("Simulation interrupted.")
     finally:
         sim.stop_servers()
 
