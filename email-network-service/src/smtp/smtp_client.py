@@ -10,7 +10,7 @@ the email data and closing the connection.
 
 import socket
 from typing import Optional, Tuple
-from src.common.logger import get_class_logger
+from src.common.logger import get_class_logger, log_block
 from src.config import Config
 from src.common.exceptions import SMTPProtocolError, SMTPConnectionError
 from src.rdt.rdt_sender import RDTSender
@@ -97,24 +97,30 @@ class SMTPClient:
         Returns:
             bool: True if the email was sent successfully, False otherwise.
         """
-        try:
-            self._connect()
-            self._do_handshake()
-            self._send_mail_from(sender)
-            self._send_rcpt_to(recipient)
-            self._send_data(subject, body)
-            self._send_quit()
-            return True
-        except Exception as e:
-            self.log.error(f"Email transaction failed: {e}")
-            if self.is_connected:
-                try:
-                    self._send_command("QUIT")
-                except:
-                    pass
-            return False
-        finally:
-            self._close()
+        with log_block("SMTPClient.send_email"):
+            self.log.info(
+                "Beginning SMTP transaction",
+                extra={"sender": sender, "recipient": recipient, "subject": subject},
+            )
+            try:
+                self._connect()
+                self._do_handshake()
+                self._send_mail_from(sender)
+                self._send_rcpt_to(recipient)
+                self._send_data(subject, body)
+                self._send_quit()
+                self.log.info("SMTP transaction completed successfully.")
+                return True
+            except Exception as e:
+                self.log.exception(f"Email transaction failed: {e}")
+                if self.is_connected:
+                    try:
+                        self._send_command("QUIT")
+                    except Exception:
+                        self.log.warning("Failed to send QUIT during cleanup.", exc_info=True)
+                return False
+            finally:
+                self._close()
 
     def _connect(self):
         """
@@ -129,31 +135,39 @@ class SMTPClient:
         Raises:
             SMTPConnectionError: If the server does not respond with the expected code.
         """
-        self.receiver_gen = self.rdt_receiver.start_receiving()
+        with log_block("SMTPClient._connect"):
+            self.log.debug("Resetting receiver generator for new session.")
+            self.receiver_gen = self.rdt_receiver.start_receiving()
 
-        # Send NOOP to initiate the session
-        self._send_command("NOOP")
+            # Send NOOP to initiate the session
+            self.log.debug("Sending NOOP handshake command.")
+            self._send_command("NOOP")
 
-        # 1. Expect Welcome Message (220) from Session Creation
-        try:
-            code, msg = self._get_reply()
-            if code != SMTP_READY:
-                raise SMTPConnectionError(f"Server not ready. Got: {code} {msg}")
-        except Exception as e:
-            raise SMTPConnectionError(f"Connection failed during handshake: {e}")
+            # 1. Expect Welcome Message (220) from Session Creation
+            try:
+                code, msg = self._get_reply()
+                self.log.debug(f"Handshake welcome reply: code={code}, msg={msg!r}")
+                if code != SMTP_READY:
+                    raise SMTPConnectionError(f"Server not ready. Got: {code} {msg}")
+            except Exception as e:
+                raise SMTPConnectionError(f"Connection failed during handshake: {e}")
 
-        # 2. Expect Response to NOOP (250)
-        # We must consume this response so it doesn't interfere with the subsequent HELO.
-        try:
-            code_noop, _ = self._get_reply()
-            if code_noop != SMTP_OK:
-                self.log.warning(f"Initial NOOP handshake returned code: {code_noop}")
-        except Exception:
-            # If the server is modified in the future to not send 250 for the
-            # trigger packet, we ignore read errors here to remain robust.
-            pass
+            # 2. Expect Response to NOOP (250)
+            # We must consume this response so it doesn't interfere with the subsequent HELO.
+            try:
+                code_noop, msg_noop = self._get_reply()
+                self.log.debug(
+                    f"NOOP command reply: code={code_noop}, msg={msg_noop!r}"
+                )
+                if code_noop != SMTP_OK:
+                    self.log.warning(f"Initial NOOP handshake returned code: {code_noop}")
+            except Exception:
+                # If the server is modified in the future to not send 250 for the
+                # trigger packet, we ignore read errors here to remain robust.
+                self.log.debug("NOOP response read skipped due to exception.", exc_info=True)
 
-        self.is_connected = True
+            self.is_connected = True
+            self.log.info("SMTP connection established and session ready.")
 
     def _do_handshake(self):
         """
@@ -162,69 +176,95 @@ class SMTPClient:
         Raises:
             SMTPProtocolError: If the server does not respond with a `250 OK`.
         """
-        self._send_command("HELO localhost")
-        code, _ = self._get_reply()
-        if code != SMTP_OK:
-            raise SMTPProtocolError("HELO failed")
+        with log_block("SMTPClient._do_handshake"):
+            self.log.debug("Sending HELO command.")
+            self._send_command("HELO localhost")
+            code, msg = self._get_reply()
+            self.log.debug(f"HELO reply: code={code}, msg={msg!r}")
+            if code != SMTP_OK:
+                raise SMTPProtocolError("HELO failed")
 
     def _send_mail_from(self, sender: str):
         """
         Sends the `MAIL FROM` command.
         """
-        self._send_command(f"MAIL FROM:<{sender}>")
-        code, _ = self._get_reply()
-        if code != SMTP_OK:
-            raise SMTPProtocolError("MAIL FROM failed")
+        with log_block("SMTPClient._send_mail_from"):
+            self.log.info(f"Issuing MAIL FROM for {sender}.")
+            self._send_command(f"MAIL FROM:<{sender}>")
+            code, msg = self._get_reply()
+            self.log.debug(f"MAIL FROM reply: code={code}, msg={msg!r}")
+            if code != SMTP_OK:
+                raise SMTPProtocolError("MAIL FROM failed")
 
     def _send_rcpt_to(self, recipient: str):
         """
         Sends the `RCPT TO` command.
         """
-        self._send_command(f"RCPT TO:<{recipient}>")
-        code, _ = self._get_reply()
-        if code != SMTP_OK:
-            raise SMTPProtocolError("RCPT TO failed")
+        with log_block("SMTPClient._send_rcpt_to"):
+            self.log.info(f"Issuing RCPT TO for {recipient}.")
+            self._send_command(f"RCPT TO:<{recipient}>")
+            code, msg = self._get_reply()
+            self.log.debug(f"RCPT TO reply: code={code}, msg={msg!r}")
+            if code != SMTP_OK:
+                raise SMTPProtocolError("RCPT TO failed")
 
     def _send_data(self, subject: str, body: str):
         """
         Sends the `DATA` command and the email content.
         """
-        self._send_command("DATA")
-        code, msg = self._get_reply()
-        if code != SMTP_START_INPUT:
-            raise SMTPProtocolError(f"DATA command rejected: {code} {msg}")
+        with log_block("SMTPClient._send_data"):
+            self.log.info("Issuing DATA command.")
+            self._send_command("DATA")
+            code, msg = self._get_reply()
+            self.log.debug(f"DATA reply: code={code}, msg={msg!r}")
+            if code != SMTP_START_INPUT:
+                raise SMTPProtocolError(f"DATA command rejected: {code} {msg}")
 
-        # --- CHUNKING LOGIC ---
-        full_payload = f"Subject: {subject}\r\n\r\n{body}\r\n.\r\n"
-        payload_bytes = full_payload.encode("ascii")
-        total_len = len(payload_bytes)
-        sent = 0
+            # --- CHUNKING LOGIC ---
+            full_payload = f"Subject: {subject}\r\n\r\n{body}\r\n.\r\n"
+            payload_bytes = full_payload.encode("ascii")
+            total_len = len(payload_bytes)
+            sent = 0
 
-        while sent < total_len:
-            chunk = payload_bytes[sent : sent + Config.MAX_PAYLOAD_SIZE]
-            self.rdt_sender.send(chunk)
-            sent += len(chunk)
+            self.log.debug(
+                f"Streaming email payload: total_bytes={total_len}, "
+                f"chunk_size={Config.MAX_PAYLOAD_SIZE}"
+            )
 
-        code, msg = self._get_reply()
-        if code != SMTP_OK:
-            raise SMTPProtocolError(f"Data finalization failed: {code} {msg}")
+            while sent < total_len:
+                chunk = payload_bytes[sent : sent + Config.MAX_PAYLOAD_SIZE]
+                self.log.debug(
+                    f"Sending chunk bytes[{sent}:{sent + len(chunk)}] "
+                    f"({len(chunk)} bytes)."
+                )
+                self.rdt_sender.send(chunk)
+                sent += len(chunk)
+
+            code, msg = self._get_reply()
+            self.log.debug(f"DATA finalization reply: code={code}, msg={msg!r}")
+            if code != SMTP_OK:
+                raise SMTPProtocolError(f"Data finalization failed: {code} {msg}")
 
     def _send_quit(self):
         """
         Sends the `QUIT` command to terminate the SMTP session.
         """
-        self._send_command("QUIT")
-        try:
-            self._get_reply()
-        except:
-            pass
-        self.is_connected = False
+        with log_block("SMTPClient._send_quit"):
+            self.log.info("Issuing QUIT command.")
+            self._send_command("QUIT")
+            try:
+                code, msg = self._get_reply()
+                self.log.debug(f"QUIT reply: code={code}, msg={msg!r}")
+            except Exception:
+                self.log.warning("No reply received for QUIT.", exc_info=True)
+            self.is_connected = False
 
     def _send_command(self, cmd: str):
         """
         Sends an SMTP command string to the server via the RDT sender.
         Appends CRLF as required by protocol.
         """
+        self.log.debug(f"Sending command: {cmd}")
         self.rdt_sender.send((cmd + "\r\n").encode("ascii"))
 
     def _get_reply(self) -> Tuple[int, str]:
@@ -235,8 +275,9 @@ class SMTPClient:
             Tuple[int, str]: Status code and message.
         """
         try:
-            data_bytes, _ = next(self.receiver_gen)
+            data_bytes, addr = next(self.receiver_gen)
             reply = data_bytes.decode("ascii").strip()
+            self.log.debug(f"Received reply from {addr}: {reply!r}")
 
             if len(reply) < 3:
                 raise SMTPProtocolError(f"Malformed reply: {reply}")
@@ -251,10 +292,14 @@ class SMTPClient:
         """
         Closes the socket and stops the RDT dispatcher thread.
         """
-        if self.dispatcher:
-            self.dispatcher.stop()
-        if self.sock:
-            self.sock.close()
+        with log_block("SMTPClient._close"):
+            if self.dispatcher:
+                self.log.debug("Stopping dispatcher.")
+                self.dispatcher.stop()
+            if self.sock:
+                addr = self.sock.getsockname()
+                self.log.debug(f"Closing socket bound to {addr}.")
+                self.sock.close()
 
     def to_string(self) -> str:
         """

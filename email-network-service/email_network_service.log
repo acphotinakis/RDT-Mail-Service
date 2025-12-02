@@ -1,0 +1,924 @@
+2025-12-01 20:51:31 | INFO | type | === Application Configuration ===
+2025-12-01 20:51:31 | INFO | type | AUTOLOGIN_FILE: .autologin.json
+2025-12-01 20:51:31 | INFO | type | BASE_DIR: /home/stu5/s0/acp7795/Documents/Fall2025/651/smtp-protocol-implementation/email-network-service
+2025-12-01 20:51:31 | INFO | type | CLIENT_IP: 127.0.0.1
+2025-12-01 20:51:31 | INFO | type | CLIENT_LISTENING_PORT: 2526
+2025-12-01 20:51:31 | INFO | type | CONCURRENCY: 5
+2025-12-01 20:51:31 | INFO | type | DATABASE_PATH: /home/stu5/s0/acp7795/Documents/Fall2025/651/smtp-protocol-implementation/email-network-service/database
+2025-12-01 20:51:31 | INFO | type | DELAY_BETWEEN_SENDS: 0.1
+2025-12-01 20:51:31 | INFO | type | LOGS_DIR: /home/stu5/s0/acp7795/Documents/Fall2025/651/smtp-protocol-implementation/email-network-service/logs
+2025-12-01 20:51:31 | INFO | type | LOG_LEVEL: DEBUG
+2025-12-01 20:51:31 | INFO | type | MAILBOXES_DIR: /home/stu5/s0/acp7795/Documents/Fall2025/651/smtp-protocol-implementation/email-network-service/database/mailboxes
+2025-12-01 20:51:31 | INFO | type | MAX_PAYLOAD_SIZE: 1024
+2025-12-01 20:51:31 | INFO | type | MESSAGE_SIZE: 200
+2025-12-01 20:51:31 | INFO | type | NUM_EMAILS_PER_USER: 5
+2025-12-01 20:51:31 | INFO | type | NUM_USERS: 2
+2025-12-01 20:51:31 | INFO | type | POP3_SERVER_HOST: 127.0.0.1
+2025-12-01 20:51:31 | INFO | type | POP3_SERVER_PORT: 1100
+2025-12-01 20:51:31 | INFO | type | RDT_RECV_BUFSIZE: 4096
+2025-12-01 20:51:31 | INFO | type | RDT_TIMEOUT: 1.0
+2025-12-01 20:51:31 | INFO | type | RDT_WINDOW_SIZE: 10
+2025-12-01 20:51:31 | INFO | type | SERVER_BIND_IP: 127.0.0.1
+2025-12-01 20:51:31 | INFO | type | SMTP_SERVER_HOST: 127.0.0.1
+2025-12-01 20:51:31 | INFO | type | SMTP_SERVER_PORT: 2525
+2025-12-01 20:51:31 | INFO | type | TEMP_EMAILS_DIR: /home/stu5/s0/acp7795/Documents/Fall2025/651/smtp-protocol-implementation/email-network-service/database/temp
+2025-12-01 20:51:31 | INFO | type | USER_DB_FILE: /home/stu5/s0/acp7795/Documents/Fall2025/651/smtp-protocol-implementation/email-network-service/database/users.json
+2025-12-01 20:51:31 | INFO | type | =================================
+2025-12-01 20:51:31 | INFO | User | 
+User Object State:
+---------------------------------------------
+Username        : user1
+Mailbox Path    : database/mailboxes/user1
+Password Set    : True
+Password Length : 8
+Object ID       : 0x7f842a44e0d0
+---------------------------------------------
+2025-12-01 20:51:31 | INFO | User | 
+User Object State:
+---------------------------------------------
+Username        : user2
+Mailbox Path    : database/mailboxes/user2
+Password Set    : True
+Password Length : 8
+Object ID       : 0x7f842a26a4d0
+---------------------------------------------
+2025-12-01 20:51:31 | INFO | UserManager | UserManager initialized. Loaded 2 users.
+2025-12-01 20:51:31 | INFO | UserManager | 
+UserManager State:
+------------------------------------------------
+DB File            : /home/stu5/s0/acp7795/Documents/Fall2025/651/smtp-protocol-implementation/email-network-service/database/users.json
+Users Loaded       : 2
+Usernames          : user1, user2
+Lock Type          : RLock
+Singleton Instance : 0x7f842a25ae50
+------------------------------------------------
+2025-12-01 20:51:31 | INFO | Simulation | 
+Simulation State:
+------------------------------------------------------
+Num Users                : 2
+Num Emails/User          : 5
+Concurrency              : 5
+Delay Between Sends      : 0.1
+Message Size             : 200
+Users Loaded             : 0
+Usernames                : (none)
+Sent Messages (Recorded) : 0
+User Manager             : UserManager
+Stats Tracker            : SimulationStats
+SMTP Server              : (not started)
+POP3 Server              : (not started)
+Instance Address         : 0x7f842ab0c5d0
+------------------------------------------------------
+2025-12-01 20:51:31 | INFO | Simulation | === PHASE 2: Creating 2 Users ===
+2025-12-01 20:51:31 | INFO | Simulation | Users ready: user1, user2
+2025-12-01 20:51:31 | INFO | Simulation | === PHASE 1: STARTING INFRASTRUCTURE ===
+2025-12-01 20:51:31 | INFO | Simulation | Starting SMTP server...
+2025-12-01 20:51:31 | INFO | SMTPServer | Initializing SMTP server module...
+2025-12-01 20:51:31 | INFO | RDTDispatcher | RDT Dispatcher initialized.
+2025-12-01 20:51:31 | INFO | RDTDispatcher | 
+RDTDispatcher State:
+-------------------------------------------------
+Socket FD           : 4
+Socket Timeout      : 1.0
+Dispatcher Running  : False
+Thread Alive        : False
+Thread Name         : None
+Queued Data Packets : 0
+ACK Listeners Count : 0
+-------------------------------------------------
+2025-12-01 20:51:31 | INFO | RDTDispatcher | RDT Dispatcher thread started.
+2025-12-01 20:51:31 | INFO | RDTReceiver | RDT Receiver initialized on 127.0.0.1:2525
+2025-12-01 20:51:31 | INFO | RDTReceiver | 
+RDTReceiver State:
+------------------------------------------------
+Running            : True
+Tracked Clients    : 0
+Expected SEQs      : {}
+Dispatcher Running : True
+Socket FD          : 4
+------------------------------------------------
+2025-12-01 20:51:31 | INFO | MailboxReader | MailboxReader initialized.
+2025-12-01 20:51:31 | INFO | MailboxReader | 
+MailboxReader State:
+---------------------------------------------------
+Class                 : MailboxReader
+Logger Name           : MailboxReader
+Readable Mailbox Root : /home/stu5/s0/acp7795/Documents/Fall2025/651/smtp-protocol-implementation/email-network-service/database/mailboxes
+Temp Directory        : /home/stu5/s0/acp7795/Documents/Fall2025/651/smtp-protocol-implementation/email-network-service/database/temp
+---------------------------------------------------
+2025-12-01 20:51:31 | INFO | MailboxWriter | Initialized MailboxWriter.
+2025-12-01 20:51:31 | INFO | MailboxWriter | 
+MailboxWriter State:
+----------------------------------------------------
+Class                  : MailboxWriter
+Logger Name            : MailboxWriter
+Mailbox Root           : /home/stu5/s0/acp7795/Documents/Fall2025/651/smtp-protocol-implementation/email-network-service/database/mailboxes
+Temp Root              : /home/stu5/s0/acp7795/Documents/Fall2025/651/smtp-protocol-implementation/email-network-service/database/temp
+Supports Atomic Writes : True
+----------------------------------------------------
+2025-12-01 20:51:31 | INFO | StorageManager | StorageManager initialized.
+2025-12-01 20:51:31 | INFO | StorageManager | 
+StorageManager State:
+------------------------------------------------
+Class              : StorageManager
+Logger Name        : StorageManager
+MailboxReader      : MailboxReader
+MailboxWriter      : MailboxWriter
+Users with Locks   : 0
+Lock Keys          : (none)
+Singleton Instance : 0x7f842aa3b450
+------------------------------------------------
+2025-12-01 20:51:31 | INFO | SMTPServer | SMTP server initialized on 127.0.0.1:2525
+2025-12-01 20:51:31 | INFO | SMTPServer | 
+POP3Server Configuration:
+-----------------------------------------------------
+Host                    : 127.0.0.1
+Port                    : 2525
+Running                 : False
+Socket Bound            : 127.0.0.1:2525
+Thread Alive            : False
+Thread Name             : None
+Thread ID               : None
+Native Thread ID        : None
+Thread Daemon           : None
+Thread Uptime (s)       : None
+Dispatcher Thread Alive : True
+Receiver Running        : None
+Active Senders          : 0
+Storage Backend         : StorageManager
+-----------------------------------------------------
+2025-12-01 20:51:31 | INFO | POP3Server | Initializing POP3 server module...
+2025-12-01 20:51:31 | INFO | RDTDispatcher | RDT Dispatcher initialized.
+2025-12-01 20:51:31 | INFO | RDTDispatcher | 
+RDTDispatcher State:
+-------------------------------------------------
+Socket FD           : 5
+Socket Timeout      : 1.0
+Dispatcher Running  : False
+Thread Alive        : False
+Thread Name         : None
+Queued Data Packets : 0
+ACK Listeners Count : 0
+-------------------------------------------------
+2025-12-01 20:51:31 | INFO | RDTDispatcher | RDT Dispatcher thread started.
+2025-12-01 20:51:31 | INFO | RDTReceiver | RDT Receiver initialized on 127.0.0.1:1100
+2025-12-01 20:51:31 | INFO | RDTReceiver | 
+RDTReceiver State:
+------------------------------------------------
+Running            : True
+Tracked Clients    : 0
+Expected SEQs      : {}
+Dispatcher Running : True
+Socket FD          : 5
+------------------------------------------------
+2025-12-01 20:51:32 | INFO | POP3Server | POP3 server initialized on 127.0.0.1:1100
+2025-12-01 20:51:32 | INFO | POP3Server | 
+POP3Server Configuration:
+-----------------------------------------------------
+Host                    : 127.0.0.1
+Port                    : 1100
+Running                 : False
+Socket Bound            : 127.0.0.1:1100
+Thread Alive            : False
+Thread Name             : None
+Thread ID               : None
+Native Thread ID        : None
+Thread Daemon           : None
+Thread Uptime (s)       : None
+Dispatcher Thread Alive : True
+Receiver Running        : None
+Active Senders          : 0
+Storage Backend         : StorageManager
+User Manager            : UserManager
+-----------------------------------------------------
+2025-12-01 20:51:32 | INFO | SMTPServer | SMTP serve loop running...
+2025-12-01 20:51:32 | INFO | SMTPServer | SMTP server started.
+2025-12-01 20:51:32 | INFO | RDTReceiver | Receiver: Listening for incoming packets...
+2025-12-01 20:51:32 | INFO | POP3Server | POP3 serve loop running...
+2025-12-01 20:51:32 | INFO | POP3Server | POP3 server started.
+2025-12-01 20:51:32 | INFO | RDTReceiver | Receiver: Listening for incoming packets...
+2025-12-01 20:51:33 | INFO | Simulation | SMTP + POP3 servers running.
+2025-12-01 20:51:33 | INFO | Simulation | === PHASE 3: Multi-Threaded Email Traffic STARTED ===
+Concurrency Level     : 5
+Users Participating    : 2
+Delay Between Sends    : 0.1s
+Total Email Targets    : 2 users
+Message Size (approx.) : 200 bytes
+-------------------------------------------------------
+2025-12-01 20:51:33 | INFO | Simulation | [SIM] Allocating ThreadPoolExecutor...
+2025-12-01 20:51:33 | INFO | Simulation | [SIM] ThreadPoolExecutor READY — Max Workers = 5
+[SIM] Dispatching SMTP tasks...
+2025-12-01 20:51:33 | INFO | Simulation | [SIM] QUEUING TASK 1/10 — user 'user1', email #1/5
+2025-12-01 20:51:33 | INFO | Simulation | [SMTP] user1 -> user2
+2025-12-01 20:51:33 | INFO | RDTDispatcher | RDT Dispatcher initialized.
+2025-12-01 20:51:33 | INFO | RDTDispatcher | 
+RDTDispatcher State:
+-------------------------------------------------
+Socket FD           : 6
+Socket Timeout      : 1.0
+Dispatcher Running  : False
+Thread Alive        : False
+Thread Name         : None
+Queued Data Packets : 0
+ACK Listeners Count : 0
+-------------------------------------------------
+2025-12-01 20:51:33 | INFO | RDTDispatcher | RDT Dispatcher thread started.
+2025-12-01 20:51:33 | INFO | RDTSender | RDT Sender initialized on ('127.0.0.1', 2525)
+2025-12-01 20:51:33 | INFO | RDTSender | 
+RDTSender State:
+------------------------------------------------
+Destination        : 127.0.0.1:2525
+Current SEQ        : 0
+Dispatcher Running : True
+Socket FD          : 6
+------------------------------------------------
+2025-12-01 20:51:33 | INFO | RDTReceiver | RDT Receiver initialized on 127.0.0.1:49962
+2025-12-01 20:51:33 | INFO | RDTReceiver | 
+RDTReceiver State:
+------------------------------------------------
+Running            : True
+Tracked Clients    : 0
+Expected SEQs      : {}
+Dispatcher Running : True
+Socket FD          : 6
+------------------------------------------------
+2025-12-01 20:51:33 | INFO | SMTPClient | SMTP Client initialized on 127.0.0.1:49962
+2025-12-01 20:51:33 | INFO | SMTPClient | 
+SMTPClient State:
+-----------------------------------------------------
+Socket Bound            : 127.0.0.1:49962
+Server Target           : 127.0.0.1:2525
+RDT Timeout             : 1.0
+Max Payload Size        : 1024
+Connected               : False
+Dispatcher Running      : True
+Dispatcher Thread Alive : True
+Dispatcher Thread Name  : RDT-Dispatcher
+RDT Sender Dest         : ('127.0.0.1', 2525)
+Receiver Active         : True
+-----------------------------------------------------
+2025-12-01 20:51:33 | INFO | RDTSender | RDT Sender initialized on ('127.0.0.1', 49962)
+2025-12-01 20:51:33 | INFO | RDTReceiver | Receiver: Listening for incoming packets...
+2025-12-01 20:51:33 | INFO | Simulation | [SIM] QUEUING TASK 2/10 — user 'user1', email #2/5
+2025-12-01 20:51:33 | INFO | RDTSender | 
+RDTSender State:
+------------------------------------------------
+Destination        : 127.0.0.1:49962
+Current SEQ        : 0
+Dispatcher Running : True
+Socket FD          : 4
+------------------------------------------------
+2025-12-01 20:51:33 | INFO | Simulation | [SMTP] user1 -> user2
+2025-12-01 20:51:33 | INFO | SMTPServer | New SMTP session created for client ('127.0.0.1', 49962)
+2025-12-01 20:51:33 | INFO | RDTDispatcher | RDT Dispatcher initialized.
+2025-12-01 20:51:33 | INFO | MailboxWriter | --- BEGIN EMAIL WRITE TRANSACTION for user 'user2' ---
+2025-12-01 20:51:33 | INFO | RDTDispatcher | 
+RDTDispatcher State:
+-------------------------------------------------
+Socket FD           : 7
+Socket Timeout      : 1.0
+Dispatcher Running  : False
+Thread Alive        : False
+Thread Name         : None
+Queued Data Packets : 0
+ACK Listeners Count : 0
+-------------------------------------------------
+2025-12-01 20:51:33 | INFO | MailboxWriter | Assigned message filename: 1764640293_fbaa700b-3dc0-470b-a6ec-0a5e7141d036.msg
+
+2025-12-01 20:51:33 | INFO | RDTDispatcher | RDT Dispatcher thread started.
+2025-12-01 20:51:33 | INFO | RDTSender | RDT Sender initialized on ('127.0.0.1', 2525)
+2025-12-01 20:51:33 | INFO | RDTSender | 
+RDTSender State:
+------------------------------------------------
+Destination        : 127.0.0.1:2525
+Current SEQ        : 0
+Dispatcher Running : True
+Socket FD          : 7
+------------------------------------------------
+2025-12-01 20:51:33 | INFO | RDTReceiver | RDT Receiver initialized on 127.0.0.1:56712
+2025-12-01 20:51:33 | INFO | RDTReceiver | 
+RDTReceiver State:
+------------------------------------------------
+Running            : True
+Tracked Clients    : 0
+Expected SEQs      : {}
+Dispatcher Running : True
+Socket FD          : 7
+------------------------------------------------
+2025-12-01 20:51:33 | INFO | SMTPClient | SMTP Client initialized on 127.0.0.1:56712
+2025-12-01 20:51:33 | INFO | SMTPClient | 
+SMTPClient State:
+-----------------------------------------------------
+Socket Bound            : 127.0.0.1:56712
+Server Target           : 127.0.0.1:2525
+RDT Timeout             : 1.0
+Max Payload Size        : 1024
+Connected               : False
+Dispatcher Running      : True
+Dispatcher Thread Alive : True
+Dispatcher Thread Name  : RDT-Dispatcher
+RDT Sender Dest         : ('127.0.0.1', 2525)
+Receiver Active         : True
+-----------------------------------------------------
+2025-12-01 20:51:33 | INFO | RDTSender | RDT Sender initialized on ('127.0.0.1', 56712)
+2025-12-01 20:51:33 | INFO | RDTSender | 
+RDTSender State:
+------------------------------------------------
+Destination        : 127.0.0.1:56712
+Current SEQ        : 0
+Dispatcher Running : True
+Socket FD          : 4
+------------------------------------------------
+2025-12-01 20:51:33 | INFO | RDTReceiver | Receiver: Listening for incoming packets...
+2025-12-01 20:51:33 | INFO | SMTPServer | New SMTP session created for client ('127.0.0.1', 56712)
+2025-12-01 20:51:33 | INFO | MailboxWriter | Email file finalized at: /home/stu5/s0/acp7795/Documents/Fall2025/651/smtp-protocol-implementation/email-network-service/database/mailboxes/user2/1764640293_fbaa700b-3dc0-470b-a6ec-0a5e7141d036.msg
+2025-12-01 20:51:33 | WARNING | MailboxWriter | No metadata.json found at /home/stu5/s0/acp7795/Documents/Fall2025/651/smtp-protocol-implementation/email-network-service/database/mailboxes/user2/metadata.json. Creating a fresh metadata structure.
+2025-12-01 20:51:33 | INFO | MailboxWriter | metadata.json updated successfully at: /home/stu5/s0/acp7795/Documents/Fall2025/651/smtp-protocol-implementation/email-network-service/database/mailboxes/user2/metadata.json
+2025-12-01 20:51:33 | INFO | MailboxWriter | Completed metadata update for new message: 1764640293_fbaa700b-3dc0-470b-a6ec-0a5e7141d036.msg
+2025-12-01 20:51:33 | INFO | MailboxWriter | --- END EMAIL WRITE TRANSACTION for user 'user2' ---
+2025-12-01 20:51:33 | INFO | StorageManager | [SAVE] Email successfully saved for 'user2'. Path: /home/stu5/s0/acp7795/Documents/Fall2025/651/smtp-protocol-implementation/email-network-service/database/mailboxes/user2/1764640293_fbaa700b-3dc0-470b-a6ec-0a5e7141d036.msg
+2025-12-01 20:51:33 | INFO | MailboxWriter | --- BEGIN EMAIL WRITE TRANSACTION for user 'user2' ---
+2025-12-01 20:51:33 | INFO | MailboxWriter | Assigned message filename: 1764640293_c0a9fba8-6428-4868-9209-6b065d008d51.msg
+
+2025-12-01 20:51:33 | INFO | Simulation | [SIM] QUEUING TASK 3/10 — user 'user1', email #3/5
+2025-12-01 20:51:33 | INFO | Simulation | [SMTP] user1 -> user2
+2025-12-01 20:51:33 | INFO | RDTDispatcher | RDT Dispatcher initialized.
+2025-12-01 20:51:33 | INFO | RDTDispatcher | 
+RDTDispatcher State:
+-------------------------------------------------
+Socket FD           : 8
+Socket Timeout      : 1.0
+Dispatcher Running  : False
+Thread Alive        : False
+Thread Name         : None
+Queued Data Packets : 0
+ACK Listeners Count : 0
+-------------------------------------------------
+2025-12-01 20:51:33 | INFO | RDTDispatcher | RDT Dispatcher thread started.
+2025-12-01 20:51:33 | INFO | RDTSender | RDT Sender initialized on ('127.0.0.1', 2525)
+2025-12-01 20:51:33 | INFO | RDTSender | 
+RDTSender State:
+------------------------------------------------
+Destination        : 127.0.0.1:2525
+Current SEQ        : 0
+Dispatcher Running : True
+Socket FD          : 8
+------------------------------------------------
+2025-12-01 20:51:33 | INFO | RDTReceiver | RDT Receiver initialized on 127.0.0.1:45284
+2025-12-01 20:51:33 | INFO | RDTReceiver | 
+RDTReceiver State:
+------------------------------------------------
+Running            : True
+Tracked Clients    : 0
+Expected SEQs      : {}
+Dispatcher Running : True
+Socket FD          : 8
+------------------------------------------------
+2025-12-01 20:51:33 | INFO | SMTPClient | SMTP Client initialized on 127.0.0.1:45284
+2025-12-01 20:51:33 | INFO | SMTPClient | 
+SMTPClient State:
+-----------------------------------------------------
+Socket Bound            : 127.0.0.1:45284
+Server Target           : 127.0.0.1:2525
+RDT Timeout             : 1.0
+Max Payload Size        : 1024
+Connected               : False
+Dispatcher Running      : True
+Dispatcher Thread Alive : True
+Dispatcher Thread Name  : RDT-Dispatcher
+RDT Sender Dest         : ('127.0.0.1', 2525)
+Receiver Active         : True
+-----------------------------------------------------
+2025-12-01 20:51:33 | INFO | RDTSender | RDT Sender initialized on ('127.0.0.1', 45284)
+2025-12-01 20:51:33 | INFO | RDTSender | 
+RDTSender State:
+------------------------------------------------
+Destination        : 127.0.0.1:45284
+Current SEQ        : 0
+Dispatcher Running : True
+Socket FD          : 4
+------------------------------------------------
+2025-12-01 20:51:33 | INFO | RDTReceiver | Receiver: Listening for incoming packets...
+2025-12-01 20:51:33 | INFO | SMTPServer | New SMTP session created for client ('127.0.0.1', 45284)
+2025-12-01 20:51:33 | INFO | MailboxWriter | Email file finalized at: /home/stu5/s0/acp7795/Documents/Fall2025/651/smtp-protocol-implementation/email-network-service/database/mailboxes/user2/1764640293_c0a9fba8-6428-4868-9209-6b065d008d51.msg
+2025-12-01 20:51:33 | INFO | MailboxWriter | metadata.json updated successfully at: /home/stu5/s0/acp7795/Documents/Fall2025/651/smtp-protocol-implementation/email-network-service/database/mailboxes/user2/metadata.json
+2025-12-01 20:51:33 | INFO | MailboxWriter | Completed metadata update for new message: 1764640293_c0a9fba8-6428-4868-9209-6b065d008d51.msg
+2025-12-01 20:51:33 | INFO | MailboxWriter | --- END EMAIL WRITE TRANSACTION for user 'user2' ---
+2025-12-01 20:51:33 | INFO | StorageManager | [SAVE] Email successfully saved for 'user2'. Path: /home/stu5/s0/acp7795/Documents/Fall2025/651/smtp-protocol-implementation/email-network-service/database/mailboxes/user2/1764640293_c0a9fba8-6428-4868-9209-6b065d008d51.msg
+2025-12-01 20:51:33 | INFO | MailboxWriter | --- BEGIN EMAIL WRITE TRANSACTION for user 'user2' ---
+2025-12-01 20:51:33 | INFO | MailboxWriter | Assigned message filename: 1764640293_a1d58335-4b3d-41ab-81b0-f4537921c6f3.msg
+
+2025-12-01 20:51:33 | INFO | MailboxWriter | Email file finalized at: /home/stu5/s0/acp7795/Documents/Fall2025/651/smtp-protocol-implementation/email-network-service/database/mailboxes/user2/1764640293_a1d58335-4b3d-41ab-81b0-f4537921c6f3.msg
+2025-12-01 20:51:33 | INFO | MailboxWriter | metadata.json updated successfully at: /home/stu5/s0/acp7795/Documents/Fall2025/651/smtp-protocol-implementation/email-network-service/database/mailboxes/user2/metadata.json
+2025-12-01 20:51:33 | INFO | MailboxWriter | Completed metadata update for new message: 1764640293_a1d58335-4b3d-41ab-81b0-f4537921c6f3.msg
+2025-12-01 20:51:33 | INFO | MailboxWriter | --- END EMAIL WRITE TRANSACTION for user 'user2' ---
+2025-12-01 20:51:33 | INFO | StorageManager | [SAVE] Email successfully saved for 'user2'. Path: /home/stu5/s0/acp7795/Documents/Fall2025/651/smtp-protocol-implementation/email-network-service/database/mailboxes/user2/1764640293_a1d58335-4b3d-41ab-81b0-f4537921c6f3.msg
+2025-12-01 20:51:33 | INFO | Simulation | [SIM] QUEUING TASK 4/10 — user 'user1', email #4/5
+2025-12-01 20:51:33 | INFO | Simulation | [SMTP] user1 -> user2
+2025-12-01 20:51:33 | INFO | RDTDispatcher | RDT Dispatcher initialized.
+2025-12-01 20:51:33 | INFO | RDTDispatcher | 
+RDTDispatcher State:
+-------------------------------------------------
+Socket FD           : 9
+Socket Timeout      : 1.0
+Dispatcher Running  : False
+Thread Alive        : False
+Thread Name         : None
+Queued Data Packets : 0
+ACK Listeners Count : 0
+-------------------------------------------------
+2025-12-01 20:51:33 | INFO | RDTDispatcher | RDT Dispatcher thread started.
+2025-12-01 20:51:33 | INFO | RDTSender | RDT Sender initialized on ('127.0.0.1', 2525)
+2025-12-01 20:51:33 | INFO | RDTSender | 
+RDTSender State:
+------------------------------------------------
+Destination        : 127.0.0.1:2525
+Current SEQ        : 0
+Dispatcher Running : True
+Socket FD          : 9
+------------------------------------------------
+2025-12-01 20:51:33 | INFO | RDTReceiver | RDT Receiver initialized on 127.0.0.1:51432
+2025-12-01 20:51:33 | INFO | RDTReceiver | 
+RDTReceiver State:
+------------------------------------------------
+Running            : True
+Tracked Clients    : 0
+Expected SEQs      : {}
+Dispatcher Running : True
+Socket FD          : 9
+------------------------------------------------
+2025-12-01 20:51:33 | INFO | SMTPClient | SMTP Client initialized on 127.0.0.1:51432
+2025-12-01 20:51:33 | INFO | SMTPClient | 
+SMTPClient State:
+-----------------------------------------------------
+Socket Bound            : 127.0.0.1:51432
+Server Target           : 127.0.0.1:2525
+RDT Timeout             : 1.0
+Max Payload Size        : 1024
+Connected               : False
+Dispatcher Running      : True
+Dispatcher Thread Alive : True
+Dispatcher Thread Name  : RDT-Dispatcher
+RDT Sender Dest         : ('127.0.0.1', 2525)
+Receiver Active         : True
+-----------------------------------------------------
+2025-12-01 20:51:33 | INFO | Simulation | [SIM] QUEUING TASK 5/10 — user 'user1', email #5/5
+2025-12-01 20:51:33 | INFO | RDTSender | RDT Sender initialized on ('127.0.0.1', 51432)
+2025-12-01 20:51:33 | INFO | RDTReceiver | Receiver: Listening for incoming packets...
+2025-12-01 20:51:33 | INFO | Simulation | [SMTP] user1 -> user2
+2025-12-01 20:51:33 | INFO | RDTSender | 
+RDTSender State:
+------------------------------------------------
+Destination        : 127.0.0.1:51432
+Current SEQ        : 0
+Dispatcher Running : True
+Socket FD          : 4
+------------------------------------------------
+2025-12-01 20:51:33 | INFO | RDTDispatcher | RDT Dispatcher initialized.
+2025-12-01 20:51:33 | INFO | SMTPServer | New SMTP session created for client ('127.0.0.1', 51432)
+2025-12-01 20:51:33 | INFO | RDTDispatcher | 
+RDTDispatcher State:
+-------------------------------------------------
+Socket FD           : 10
+Socket Timeout      : 1.0
+Dispatcher Running  : False
+Thread Alive        : False
+Thread Name         : None
+Queued Data Packets : 0
+ACK Listeners Count : 0
+-------------------------------------------------
+2025-12-01 20:51:33 | INFO | MailboxWriter | --- BEGIN EMAIL WRITE TRANSACTION for user 'user2' ---
+2025-12-01 20:51:33 | INFO | RDTDispatcher | RDT Dispatcher thread started.
+2025-12-01 20:51:33 | INFO | MailboxWriter | Assigned message filename: 1764640293_347b9a08-7087-47bf-982c-0005b4c6358c.msg
+
+2025-12-01 20:51:33 | INFO | RDTSender | RDT Sender initialized on ('127.0.0.1', 2525)
+2025-12-01 20:51:33 | INFO | Simulation | [SIM] QUEUING TASK 6/10 — user 'user2', email #1/5
+2025-12-01 20:51:33 | INFO | RDTSender | 
+RDTSender State:
+------------------------------------------------
+Destination        : 127.0.0.1:2525
+Current SEQ        : 0
+Dispatcher Running : True
+Socket FD          : 10
+------------------------------------------------
+2025-12-01 20:51:33 | INFO | MailboxWriter | Email file finalized at: /home/stu5/s0/acp7795/Documents/Fall2025/651/smtp-protocol-implementation/email-network-service/database/mailboxes/user2/1764640293_347b9a08-7087-47bf-982c-0005b4c6358c.msg
+2025-12-01 20:51:33 | INFO | RDTReceiver | RDT Receiver initialized on 127.0.0.1:45108
+2025-12-01 20:51:33 | INFO | RDTReceiver | 
+RDTReceiver State:
+------------------------------------------------
+Running            : True
+Tracked Clients    : 0
+Expected SEQs      : {}
+Dispatcher Running : True
+Socket FD          : 10
+------------------------------------------------
+2025-12-01 20:51:33 | INFO | MailboxWriter | metadata.json updated successfully at: /home/stu5/s0/acp7795/Documents/Fall2025/651/smtp-protocol-implementation/email-network-service/database/mailboxes/user2/metadata.json
+2025-12-01 20:51:33 | INFO | SMTPClient | SMTP Client initialized on 127.0.0.1:45108
+2025-12-01 20:51:33 | INFO | MailboxWriter | Completed metadata update for new message: 1764640293_347b9a08-7087-47bf-982c-0005b4c6358c.msg
+2025-12-01 20:51:33 | INFO | SMTPClient | 
+SMTPClient State:
+-----------------------------------------------------
+Socket Bound            : 127.0.0.1:45108
+Server Target           : 127.0.0.1:2525
+RDT Timeout             : 1.0
+Max Payload Size        : 1024
+Connected               : False
+Dispatcher Running      : True
+Dispatcher Thread Alive : True
+Dispatcher Thread Name  : RDT-Dispatcher
+RDT Sender Dest         : ('127.0.0.1', 2525)
+Receiver Active         : True
+-----------------------------------------------------
+2025-12-01 20:51:33 | INFO | MailboxWriter | --- END EMAIL WRITE TRANSACTION for user 'user2' ---
+2025-12-01 20:51:33 | INFO | StorageManager | [SAVE] Email successfully saved for 'user2'. Path: /home/stu5/s0/acp7795/Documents/Fall2025/651/smtp-protocol-implementation/email-network-service/database/mailboxes/user2/1764640293_347b9a08-7087-47bf-982c-0005b4c6358c.msg
+2025-12-01 20:51:33 | INFO | RDTSender | RDT Sender initialized on ('127.0.0.1', 45108)
+2025-12-01 20:51:33 | INFO | RDTReceiver | Receiver: Listening for incoming packets...
+2025-12-01 20:51:33 | INFO | RDTSender | 
+RDTSender State:
+------------------------------------------------
+Destination        : 127.0.0.1:45108
+Current SEQ        : 0
+Dispatcher Running : True
+Socket FD          : 4
+------------------------------------------------
+2025-12-01 20:51:33 | INFO | SMTPServer | New SMTP session created for client ('127.0.0.1', 45108)
+2025-12-01 20:51:33 | INFO | MailboxWriter | --- BEGIN EMAIL WRITE TRANSACTION for user 'user2' ---
+2025-12-01 20:51:33 | INFO | MailboxWriter | Assigned message filename: 1764640293_c1b688a1-2822-4ca9-a105-08e8cd766a52.msg
+
+2025-12-01 20:51:33 | INFO | MailboxWriter | Email file finalized at: /home/stu5/s0/acp7795/Documents/Fall2025/651/smtp-protocol-implementation/email-network-service/database/mailboxes/user2/1764640293_c1b688a1-2822-4ca9-a105-08e8cd766a52.msg
+2025-12-01 20:51:33 | INFO | MailboxWriter | metadata.json updated successfully at: /home/stu5/s0/acp7795/Documents/Fall2025/651/smtp-protocol-implementation/email-network-service/database/mailboxes/user2/metadata.json
+2025-12-01 20:51:33 | INFO | MailboxWriter | Completed metadata update for new message: 1764640293_c1b688a1-2822-4ca9-a105-08e8cd766a52.msg
+2025-12-01 20:51:33 | INFO | MailboxWriter | --- END EMAIL WRITE TRANSACTION for user 'user2' ---
+2025-12-01 20:51:33 | INFO | StorageManager | [SAVE] Email successfully saved for 'user2'. Path: /home/stu5/s0/acp7795/Documents/Fall2025/651/smtp-protocol-implementation/email-network-service/database/mailboxes/user2/1764640293_c1b688a1-2822-4ca9-a105-08e8cd766a52.msg
+2025-12-01 20:51:33 | INFO | Simulation | [SIM] QUEUING TASK 7/10 — user 'user2', email #2/5
+2025-12-01 20:51:33 | INFO | Simulation | [SIM] QUEUING TASK 8/10 — user 'user2', email #3/5
+2025-12-01 20:51:33 | INFO | Simulation | [SIM] QUEUING TASK 9/10 — user 'user2', email #4/5
+2025-12-01 20:51:34 | INFO | Simulation | [SIM] QUEUING TASK 10/10 — user 'user2', email #5/5
+2025-12-01 20:51:34 | INFO | Simulation | [SIM] All tasks submitted to ThreadPoolExecutor — awaiting completion...
+2025-12-01 20:51:34 | INFO | RDTDispatcher | RDT Dispatcher stopped.
+2025-12-01 20:51:34 | INFO | Simulation | [SMTP] Delivery OK (user1)
+2025-12-01 20:51:34 | INFO | Simulation | [SMTP] user2 -> user1
+2025-12-01 20:51:34 | INFO | Simulation | [SIM] Task Completion Progress: 1/10 (10.0%)
+2025-12-01 20:51:34 | INFO | RDTDispatcher | RDT Dispatcher initialized.
+2025-12-01 20:51:34 | INFO | RDTDispatcher | 
+RDTDispatcher State:
+-------------------------------------------------
+Socket FD           : 6
+Socket Timeout      : 1.0
+Dispatcher Running  : False
+Thread Alive        : False
+Thread Name         : None
+Queued Data Packets : 0
+ACK Listeners Count : 0
+-------------------------------------------------
+2025-12-01 20:51:34 | INFO | RDTDispatcher | RDT Dispatcher thread started.
+2025-12-01 20:51:34 | INFO | RDTDispatcher | RDT Dispatcher stopped.
+2025-12-01 20:51:34 | INFO | RDTSender | RDT Sender initialized on ('127.0.0.1', 2525)
+2025-12-01 20:51:34 | INFO | Simulation | [SMTP] Delivery OK (user1)
+2025-12-01 20:51:34 | INFO | RDTSender | 
+RDTSender State:
+------------------------------------------------
+Destination        : 127.0.0.1:2525
+Current SEQ        : 0
+Dispatcher Running : True
+Socket FD          : 6
+------------------------------------------------
+2025-12-01 20:51:34 | INFO | Simulation | [SMTP] user2 -> user1
+2025-12-01 20:51:34 | INFO | Simulation | [SIM] Task Completion Progress: 2/10 (20.0%)
+2025-12-01 20:51:34 | INFO | RDTReceiver | RDT Receiver initialized on 127.0.0.1:50525
+2025-12-01 20:51:34 | INFO | RDTDispatcher | RDT Dispatcher initialized.
+2025-12-01 20:51:34 | INFO | RDTDispatcher | RDT Dispatcher stopped.
+2025-12-01 20:51:34 | INFO | RDTReceiver | 
+RDTReceiver State:
+------------------------------------------------
+Running            : True
+Tracked Clients    : 0
+Expected SEQs      : {}
+Dispatcher Running : True
+Socket FD          : 6
+------------------------------------------------
+2025-12-01 20:51:34 | INFO | RDTDispatcher | 
+RDTDispatcher State:
+-------------------------------------------------
+Socket FD           : 7
+Socket Timeout      : 1.0
+Dispatcher Running  : False
+Thread Alive        : False
+Thread Name         : None
+Queued Data Packets : 0
+ACK Listeners Count : 0
+-------------------------------------------------
+2025-12-01 20:51:34 | INFO | Simulation | [SMTP] Delivery OK (user1)
+2025-12-01 20:51:34 | INFO | SMTPClient | SMTP Client initialized on 127.0.0.1:50525
+2025-12-01 20:51:34 | INFO | RDTDispatcher | RDT Dispatcher thread started.
+2025-12-01 20:51:34 | INFO | Simulation | [SMTP] user2 -> user1
+2025-12-01 20:51:34 | INFO | Simulation | [SIM] Task Completion Progress: 3/10 (30.0%)
+2025-12-01 20:51:34 | INFO | SMTPClient | 
+SMTPClient State:
+-----------------------------------------------------
+Socket Bound            : 127.0.0.1:50525
+Server Target           : 127.0.0.1:2525
+RDT Timeout             : 1.0
+Max Payload Size        : 1024
+Connected               : False
+Dispatcher Running      : True
+Dispatcher Thread Alive : True
+Dispatcher Thread Name  : RDT-Dispatcher
+RDT Sender Dest         : ('127.0.0.1', 2525)
+Receiver Active         : True
+-----------------------------------------------------
+2025-12-01 20:51:34 | INFO | RDTSender | RDT Sender initialized on ('127.0.0.1', 2525)
+2025-12-01 20:51:34 | INFO | RDTDispatcher | RDT Dispatcher initialized.
+2025-12-01 20:51:34 | INFO | RDTSender | RDT Sender initialized on ('127.0.0.1', 50525)
+2025-12-01 20:51:34 | INFO | RDTReceiver | Receiver: Listening for incoming packets...
+2025-12-01 20:51:34 | INFO | RDTSender | 
+RDTSender State:
+------------------------------------------------
+Destination        : 127.0.0.1:2525
+Current SEQ        : 0
+Dispatcher Running : True
+Socket FD          : 7
+------------------------------------------------
+2025-12-01 20:51:34 | INFO | RDTDispatcher | 
+RDTDispatcher State:
+-------------------------------------------------
+Socket FD           : 8
+Socket Timeout      : 1.0
+Dispatcher Running  : False
+Thread Alive        : False
+Thread Name         : None
+Queued Data Packets : 0
+ACK Listeners Count : 0
+-------------------------------------------------
+2025-12-01 20:51:34 | INFO | RDTSender | 
+RDTSender State:
+------------------------------------------------
+Destination        : 127.0.0.1:50525
+Current SEQ        : 0
+Dispatcher Running : True
+Socket FD          : 4
+------------------------------------------------
+2025-12-01 20:51:34 | INFO | RDTReceiver | RDT Receiver initialized on 127.0.0.1:59895
+2025-12-01 20:51:34 | INFO | RDTDispatcher | RDT Dispatcher thread started.
+2025-12-01 20:51:34 | INFO | SMTPServer | New SMTP session created for client ('127.0.0.1', 50525)
+2025-12-01 20:51:34 | INFO | RDTReceiver | 
+RDTReceiver State:
+------------------------------------------------
+Running            : True
+Tracked Clients    : 0
+Expected SEQs      : {}
+Dispatcher Running : True
+Socket FD          : 7
+------------------------------------------------
+2025-12-01 20:51:34 | INFO | RDTSender | RDT Sender initialized on ('127.0.0.1', 2525)
+2025-12-01 20:51:34 | INFO | MailboxWriter | --- BEGIN EMAIL WRITE TRANSACTION for user 'user1' ---
+2025-12-01 20:51:34 | INFO | SMTPClient | SMTP Client initialized on 127.0.0.1:59895
+2025-12-01 20:51:34 | INFO | RDTSender | 
+RDTSender State:
+------------------------------------------------
+Destination        : 127.0.0.1:2525
+Current SEQ        : 0
+Dispatcher Running : True
+Socket FD          : 8
+------------------------------------------------
+2025-12-01 20:51:34 | INFO | MailboxWriter | Assigned message filename: 1764640294_d986371a-5029-4c0c-a7a8-d47e6e6ba187.msg
+
+2025-12-01 20:51:34 | INFO | SMTPClient | 
+SMTPClient State:
+-----------------------------------------------------
+Socket Bound            : 127.0.0.1:59895
+Server Target           : 127.0.0.1:2525
+RDT Timeout             : 1.0
+Max Payload Size        : 1024
+Connected               : False
+Dispatcher Running      : True
+Dispatcher Thread Alive : True
+Dispatcher Thread Name  : RDT-Dispatcher
+RDT Sender Dest         : ('127.0.0.1', 2525)
+Receiver Active         : True
+-----------------------------------------------------
+2025-12-01 20:51:34 | INFO | RDTReceiver | RDT Receiver initialized on 127.0.0.1:41443
+2025-12-01 20:51:34 | INFO | RDTReceiver | 
+RDTReceiver State:
+------------------------------------------------
+Running            : True
+Tracked Clients    : 0
+Expected SEQs      : {}
+Dispatcher Running : True
+Socket FD          : 8
+------------------------------------------------
+2025-12-01 20:51:34 | INFO | RDTSender | RDT Sender initialized on ('127.0.0.1', 59895)
+2025-12-01 20:51:34 | INFO | RDTReceiver | Receiver: Listening for incoming packets...
+2025-12-01 20:51:34 | INFO | SMTPClient | SMTP Client initialized on 127.0.0.1:41443
+2025-12-01 20:51:34 | INFO | MailboxWriter | Email file finalized at: /home/stu5/s0/acp7795/Documents/Fall2025/651/smtp-protocol-implementation/email-network-service/database/mailboxes/user1/1764640294_d986371a-5029-4c0c-a7a8-d47e6e6ba187.msg
+2025-12-01 20:51:34 | INFO | RDTSender | 
+RDTSender State:
+------------------------------------------------
+Destination        : 127.0.0.1:59895
+Current SEQ        : 0
+Dispatcher Running : True
+Socket FD          : 4
+------------------------------------------------
+2025-12-01 20:51:34 | INFO | SMTPClient | 
+SMTPClient State:
+-----------------------------------------------------
+Socket Bound            : 127.0.0.1:41443
+Server Target           : 127.0.0.1:2525
+RDT Timeout             : 1.0
+Max Payload Size        : 1024
+Connected               : False
+Dispatcher Running      : True
+Dispatcher Thread Alive : True
+Dispatcher Thread Name  : RDT-Dispatcher
+RDT Sender Dest         : ('127.0.0.1', 2525)
+Receiver Active         : True
+-----------------------------------------------------
+2025-12-01 20:51:34 | WARNING | MailboxWriter | No metadata.json found at /home/stu5/s0/acp7795/Documents/Fall2025/651/smtp-protocol-implementation/email-network-service/database/mailboxes/user1/metadata.json. Creating a fresh metadata structure.
+2025-12-01 20:51:34 | INFO | SMTPServer | New SMTP session created for client ('127.0.0.1', 59895)
+2025-12-01 20:51:34 | INFO | RDTSender | RDT Sender initialized on ('127.0.0.1', 41443)
+2025-12-01 20:51:34 | INFO | MailboxWriter | metadata.json updated successfully at: /home/stu5/s0/acp7795/Documents/Fall2025/651/smtp-protocol-implementation/email-network-service/database/mailboxes/user1/metadata.json
+2025-12-01 20:51:34 | INFO | RDTReceiver | Receiver: Listening for incoming packets...
+2025-12-01 20:51:34 | INFO | RDTSender | 
+RDTSender State:
+------------------------------------------------
+Destination        : 127.0.0.1:41443
+Current SEQ        : 0
+Dispatcher Running : True
+Socket FD          : 4
+------------------------------------------------
+2025-12-01 20:51:34 | INFO | MailboxWriter | Completed metadata update for new message: 1764640294_d986371a-5029-4c0c-a7a8-d47e6e6ba187.msg
+2025-12-01 20:51:34 | INFO | SMTPServer | New SMTP session created for client ('127.0.0.1', 41443)
+2025-12-01 20:51:34 | INFO | MailboxWriter | --- END EMAIL WRITE TRANSACTION for user 'user1' ---
+2025-12-01 20:51:34 | INFO | StorageManager | [SAVE] Email successfully saved for 'user1'. Path: /home/stu5/s0/acp7795/Documents/Fall2025/651/smtp-protocol-implementation/email-network-service/database/mailboxes/user1/1764640294_d986371a-5029-4c0c-a7a8-d47e6e6ba187.msg
+2025-12-01 20:51:34 | INFO | MailboxWriter | --- BEGIN EMAIL WRITE TRANSACTION for user 'user1' ---
+2025-12-01 20:51:34 | INFO | RDTDispatcher | RDT Dispatcher stopped.
+2025-12-01 20:51:34 | INFO | MailboxWriter | Assigned message filename: 1764640294_4c34358c-2fef-4759-b6f7-5f1b543d46c0.msg
+
+2025-12-01 20:51:34 | INFO | Simulation | [SMTP] Delivery OK (user1)
+2025-12-01 20:51:34 | INFO | Simulation | [SMTP] user2 -> user1
+2025-12-01 20:51:34 | INFO | Simulation | [SIM] Task Completion Progress: 4/10 (40.0%)
+2025-12-01 20:51:34 | INFO | MailboxWriter | Email file finalized at: /home/stu5/s0/acp7795/Documents/Fall2025/651/smtp-protocol-implementation/email-network-service/database/mailboxes/user1/1764640294_4c34358c-2fef-4759-b6f7-5f1b543d46c0.msg
+2025-12-01 20:51:34 | INFO | RDTDispatcher | RDT Dispatcher stopped.
+2025-12-01 20:51:34 | INFO | RDTDispatcher | RDT Dispatcher initialized.
+2025-12-01 20:51:34 | INFO | Simulation | [SMTP] Delivery OK (user1)
+2025-12-01 20:51:34 | INFO | RDTDispatcher | 
+RDTDispatcher State:
+-------------------------------------------------
+Socket FD           : 9
+Socket Timeout      : 1.0
+Dispatcher Running  : False
+Thread Alive        : False
+Thread Name         : None
+Queued Data Packets : 0
+ACK Listeners Count : 0
+-------------------------------------------------
+2025-12-01 20:51:34 | INFO | Simulation | [SMTP] user2 -> user1
+2025-12-01 20:51:34 | INFO | Simulation | [SIM] Task Completion Progress: 5/10 (50.0%)
+2025-12-01 20:51:34 | INFO | RDTDispatcher | RDT Dispatcher thread started.
+2025-12-01 20:51:34 | INFO | MailboxWriter | metadata.json updated successfully at: /home/stu5/s0/acp7795/Documents/Fall2025/651/smtp-protocol-implementation/email-network-service/database/mailboxes/user1/metadata.json
+2025-12-01 20:51:34 | INFO | RDTDispatcher | RDT Dispatcher initialized.
+2025-12-01 20:51:34 | INFO | RDTSender | RDT Sender initialized on ('127.0.0.1', 2525)
+2025-12-01 20:51:34 | INFO | MailboxWriter | Completed metadata update for new message: 1764640294_4c34358c-2fef-4759-b6f7-5f1b543d46c0.msg
+2025-12-01 20:51:34 | INFO | RDTDispatcher | 
+RDTDispatcher State:
+-------------------------------------------------
+Socket FD           : 10
+Socket Timeout      : 1.0
+Dispatcher Running  : False
+Thread Alive        : False
+Thread Name         : None
+Queued Data Packets : 0
+ACK Listeners Count : 0
+-------------------------------------------------
+2025-12-01 20:51:34 | INFO | RDTSender | 
+RDTSender State:
+------------------------------------------------
+Destination        : 127.0.0.1:2525
+Current SEQ        : 0
+Dispatcher Running : True
+Socket FD          : 9
+------------------------------------------------
+2025-12-01 20:51:34 | INFO | MailboxWriter | --- END EMAIL WRITE TRANSACTION for user 'user1' ---
+2025-12-01 20:51:34 | INFO | RDTDispatcher | RDT Dispatcher thread started.
+2025-12-01 20:51:34 | INFO | RDTReceiver | RDT Receiver initialized on 127.0.0.1:40991
+2025-12-01 20:51:34 | INFO | StorageManager | [SAVE] Email successfully saved for 'user1'. Path: /home/stu5/s0/acp7795/Documents/Fall2025/651/smtp-protocol-implementation/email-network-service/database/mailboxes/user1/1764640294_4c34358c-2fef-4759-b6f7-5f1b543d46c0.msg
+2025-12-01 20:51:34 | INFO | RDTSender | RDT Sender initialized on ('127.0.0.1', 2525)
+2025-12-01 20:51:34 | INFO | RDTReceiver | 
+RDTReceiver State:
+------------------------------------------------
+Running            : True
+Tracked Clients    : 0
+Expected SEQs      : {}
+Dispatcher Running : True
+Socket FD          : 9
+------------------------------------------------
+2025-12-01 20:51:34 | INFO | MailboxWriter | --- BEGIN EMAIL WRITE TRANSACTION for user 'user1' ---
+2025-12-01 20:51:34 | INFO | RDTSender | 
+RDTSender State:
+------------------------------------------------
+Destination        : 127.0.0.1:2525
+Current SEQ        : 0
+Dispatcher Running : True
+Socket FD          : 10
+------------------------------------------------
+2025-12-01 20:51:34 | INFO | SMTPClient | SMTP Client initialized on 127.0.0.1:40991
+2025-12-01 20:51:34 | INFO | MailboxWriter | Assigned message filename: 1764640294_ff4f0d68-189e-4847-af76-91cfd50041ba.msg
+
+2025-12-01 20:51:34 | INFO | RDTReceiver | RDT Receiver initialized on 127.0.0.1:42186
+2025-12-01 20:51:34 | INFO | SMTPClient | 
+SMTPClient State:
+-----------------------------------------------------
+Socket Bound            : 127.0.0.1:40991
+Server Target           : 127.0.0.1:2525
+RDT Timeout             : 1.0
+Max Payload Size        : 1024
+Connected               : False
+Dispatcher Running      : True
+Dispatcher Thread Alive : True
+Dispatcher Thread Name  : RDT-Dispatcher
+RDT Sender Dest         : ('127.0.0.1', 2525)
+Receiver Active         : True
+-----------------------------------------------------
+2025-12-01 20:51:34 | INFO | RDTReceiver | 
+RDTReceiver State:
+------------------------------------------------
+Running            : True
+Tracked Clients    : 0
+Expected SEQs      : {}
+Dispatcher Running : True
+Socket FD          : 10
+------------------------------------------------
+2025-12-01 20:51:34 | INFO | MailboxWriter | Email file finalized at: /home/stu5/s0/acp7795/Documents/Fall2025/651/smtp-protocol-implementation/email-network-service/database/mailboxes/user1/1764640294_ff4f0d68-189e-4847-af76-91cfd50041ba.msg
+2025-12-01 20:51:34 | INFO | SMTPClient | SMTP Client initialized on 127.0.0.1:42186
+2025-12-01 20:51:34 | INFO | RDTSender | RDT Sender initialized on ('127.0.0.1', 40991)
+2025-12-01 20:51:34 | INFO | RDTReceiver | Receiver: Listening for incoming packets...
+2025-12-01 20:51:34 | INFO | SMTPClient | 
+SMTPClient State:
+-----------------------------------------------------
+Socket Bound            : 127.0.0.1:42186
+Server Target           : 127.0.0.1:2525
+RDT Timeout             : 1.0
+Max Payload Size        : 1024
+Connected               : False
+Dispatcher Running      : True
+Dispatcher Thread Alive : True
+Dispatcher Thread Name  : RDT-Dispatcher
+RDT Sender Dest         : ('127.0.0.1', 2525)
+Receiver Active         : True
+-----------------------------------------------------
+2025-12-01 20:51:34 | INFO | RDTSender | 
+RDTSender State:
+------------------------------------------------
+Destination        : 127.0.0.1:40991
+Current SEQ        : 0
+Dispatcher Running : True
+Socket FD          : 4
+------------------------------------------------
+2025-12-01 20:51:34 | INFO | MailboxWriter | metadata.json updated successfully at: /home/stu5/s0/acp7795/Documents/Fall2025/651/smtp-protocol-implementation/email-network-service/database/mailboxes/user1/metadata.json
+2025-12-01 20:51:34 | INFO | MailboxWriter | Completed metadata update for new message: 1764640294_ff4f0d68-189e-4847-af76-91cfd50041ba.msg
+2025-12-01 20:51:34 | INFO | SMTPServer | New SMTP session created for client ('127.0.0.1', 40991)
+2025-12-01 20:51:34 | INFO | MailboxWriter | --- END EMAIL WRITE TRANSACTION for user 'user1' ---
+2025-12-01 20:51:34 | INFO | RDTSender | RDT Sender initialized on ('127.0.0.1', 42186)
+2025-12-01 20:51:34 | INFO | StorageManager | [SAVE] Email successfully saved for 'user1'. Path: /home/stu5/s0/acp7795/Documents/Fall2025/651/smtp-protocol-implementation/email-network-service/database/mailboxes/user1/1764640294_ff4f0d68-189e-4847-af76-91cfd50041ba.msg
+2025-12-01 20:51:34 | INFO | RDTReceiver | Receiver: Listening for incoming packets...
+2025-12-01 20:51:34 | INFO | RDTSender | 
+RDTSender State:
+------------------------------------------------
+Destination        : 127.0.0.1:42186
+Current SEQ        : 0
+Dispatcher Running : True
+Socket FD          : 4
+------------------------------------------------
+2025-12-01 20:51:35 | INFO | SMTPServer | New SMTP session created for client ('127.0.0.1', 42186)
+2025-12-01 20:51:35 | INFO | MailboxWriter | --- BEGIN EMAIL WRITE TRANSACTION for user 'user1' ---
+2025-12-01 20:51:35 | INFO | MailboxWriter | Assigned message filename: 1764640295_27e981c8-7919-4604-89f7-22ccc9625c59.msg
+
+2025-12-01 20:51:35 | INFO | MailboxWriter | Email file finalized at: /home/stu5/s0/acp7795/Documents/Fall2025/651/smtp-protocol-implementation/email-network-service/database/mailboxes/user1/1764640295_27e981c8-7919-4604-89f7-22ccc9625c59.msg
+2025-12-01 20:51:35 | INFO | MailboxWriter | metadata.json updated successfully at: /home/stu5/s0/acp7795/Documents/Fall2025/651/smtp-protocol-implementation/email-network-service/database/mailboxes/user1/metadata.json
+2025-12-01 20:51:35 | INFO | MailboxWriter | Completed metadata update for new message: 1764640295_27e981c8-7919-4604-89f7-22ccc9625c59.msg
+2025-12-01 20:51:35 | INFO | MailboxWriter | --- END EMAIL WRITE TRANSACTION for user 'user1' ---
+2025-12-01 20:51:35 | INFO | StorageManager | [SAVE] Email successfully saved for 'user1'. Path: /home/stu5/s0/acp7795/Documents/Fall2025/651/smtp-protocol-implementation/email-network-service/database/mailboxes/user1/1764640295_27e981c8-7919-4604-89f7-22ccc9625c59.msg
+2025-12-01 20:51:35 | INFO | RDTDispatcher | RDT Dispatcher stopped.
+2025-12-01 20:51:35 | INFO | Simulation | [SMTP] Delivery OK (user2)
+2025-12-01 20:51:35 | INFO | Simulation | [SIM] Task Completion Progress: 6/10 (60.0%)
+2025-12-01 20:51:35 | INFO | RDTDispatcher | RDT Dispatcher stopped.
+2025-12-01 20:51:35 | INFO | Simulation | [SMTP] Delivery OK (user2)
+2025-12-01 20:51:35 | INFO | Simulation | [SIM] Task Completion Progress: 7/10 (70.0%)
+2025-12-01 20:51:36 | INFO | RDTDispatcher | RDT Dispatcher stopped.
+2025-12-01 20:51:36 | INFO | Simulation | [SMTP] Delivery OK (user2)
+2025-12-01 20:51:36 | INFO | Simulation | [SIM] Task Completion Progress: 8/10 (80.0%)
+2025-12-01 20:51:36 | INFO | RDTSender | Sender: Timeout waiting for ACK 0.
+2025-12-01 20:51:36 | INFO | RDTDispatcher | RDT Dispatcher stopped.
+2025-12-01 20:51:36 | INFO | Simulation | [SMTP] Delivery OK (user2)
+2025-12-01 20:51:36 | INFO | Simulation | [SIM] Task Completion Progress: 9/10 (90.0%)
+2025-12-01 20:51:37 | INFO | RDTSender | Sender: Timeout waiting for ACK 1.
+2025-12-01 20:51:38 | INFO | RDTSender | Sender: Timeout waiting for ACK 1.
+2025-12-01 20:51:39 | INFO | RDTSender | Sender: Timeout waiting for ACK 1.
+2025-12-01 20:51:40 | INFO | RDTSender | Sender: Timeout waiting for ACK 1.
+2025-12-01 20:51:40 | ERROR | RDTSender | Sender: Max retries (5) reached. Connection lost.
+2025-12-01 20:51:40 | ERROR | SMTPServer | Failed to send reply to ('127.0.0.1', 42186). Client likely disconnected.
+2025-12-01 20:58:06 | INFO | Simulation | === SHUTDOWN INFRASTRUCTURE ===
+2025-12-01 20:58:06 | INFO | RDTDispatcher | RDT Dispatcher stopped.
+2025-12-01 20:58:08 | INFO | SMTPServer | SMTP server stopped.
+2025-12-01 20:58:09 | INFO | RDTDispatcher | RDT Dispatcher stopped.
+2025-12-01 20:58:11 | INFO | POP3Server | POP3 server stopped.
