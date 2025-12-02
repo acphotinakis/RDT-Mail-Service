@@ -90,44 +90,6 @@ class SMTPServer:
             "line_buffer": bytearray(),
         }
 
-    # def _serve_loop(self):
-    #     self.log.info("SMTP serve loop running...")
-
-    #     self.dispatcher.start()
-
-    #     sessions: Dict[Tuple[str, int], Dict] = {}
-    #     last_activity: Dict[Tuple[str, int], float] = {}
-    #     SESSION_TIMEOUT = 300  # 5 minutes
-
-    #     for packet in self.rdt_receiver.start_receiving():
-
-    #         if not self._running:
-    #             break
-
-    #         try:
-    #             data, addr = packet
-    #         except Exception:
-    #             self.log.error("Invalid packet received (missing sender address).")
-    #             continue
-
-    #         self.log.debug(f"Received {len(data)} bytes from {addr}")
-
-    #         if addr not in sessions:
-    #             sessions[addr] = self._create_session()
-    #             self._send_reply(addr, "220 Welcome Simple SMTP Server")
-    #             self.log.info(f"New SMTP session created for client {addr}")
-
-    #         session = sessions[addr]
-
-    #         if session["state"] == SMTPState.READING_DATA_STREAM:
-    #             self._handle_data_stream(addr, session, data)
-    #             continue
-
-    #         self._handle_command_stream(addr, session, data, sessions)
-
-    #     self._cleanup_senders()
-    #     self.log.info("SMTP serve loop fully terminated.")
-
     def _cleanup_session(self, addr: Tuple[str, int], sessions: Dict, last_activity: Dict) -> None:
         """
         Removes a client session and cleans up associated resources.

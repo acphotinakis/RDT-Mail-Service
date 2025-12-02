@@ -21,6 +21,7 @@ class MailboxReader:
     def __init__(self):
         self.log = get_class_logger(self)
         self.log.info("MailboxReader initialized.")
+        self.log.info(self.to_string())
 
     # Internal: Load metadata for a user
     def _load_metadata(self, metadata_path: str) -> Dict:
@@ -166,3 +167,24 @@ class MailboxReader:
         uid = message_meta.get("uid")
         self.log.debug(f"Retrieved UID '{uid}' for filename '{filename}'.")
         return uid
+
+    def to_string(self) -> str:
+        """
+        Returns a diagnostic overview of the MailboxReader state.
+        """
+        props = {
+            "Class": self.__class__.__name__,
+            "Logger Name": self.log.name,
+            "Readable Mailbox Root": Config.MAILBOXES_DIR,
+            "Temp Directory": Config.TEMP_EMAILS_DIR,
+        }
+
+        longest = max(len(k) for k in props.keys())
+        lines = ["\nMailboxReader State:"]
+        lines.append("-" * (longest + 30))
+
+        for k, v in props.items():
+            lines.append(f"{k.ljust(longest)} : {v}")
+
+        lines.append("-" * (longest + 30))
+        return "\n".join(lines)

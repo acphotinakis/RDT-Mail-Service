@@ -4,6 +4,9 @@ import re
 from src.common.logger import get_class_logger
 
 
+log = get_class_logger("MESSAGE_VIEW_QT")
+
+
 def render_html_to_text(html: str) -> str:
     """Simplistic HTML to plain text conversion for the Qt viewer."""
     log.debug(f"Rendering HTML to text. Original length: {len(html)}")

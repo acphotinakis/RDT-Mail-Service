@@ -3,12 +3,13 @@ from typing import List, Optional
 from email import message_from_string
 
 
-from src.client.frontend.models.email_data import EmailData
+from src.models.email_data import EmailData
 from src.mailbox.storage_manager import StorageManager
 from src.auth.user import User
 from src.common.logger import get_class_logger
 
-from src.common.logger import get_class_logger
+
+log = get_class_logger("STORAGE_WRAPPER_QT")
 
 
 def _parse_email_file(uid: str, content: str) -> Optional[EmailData]:

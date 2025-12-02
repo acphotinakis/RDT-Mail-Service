@@ -5,7 +5,7 @@ from typing import Optional, List
 from src.client.frontend.wrappers.storage_wrapper import StorageWrapper
 from src.client.frontend.wrappers.smtp_wrapper import SMTPWrapper
 from src.client.frontend.wrappers.pop3_wrapper import POP3Wrapper
-from src.client.frontend.models.email_data import EmailData
+from src.models.email_data import EmailData
 import src.client.frontend.autologin_manager as autologin_manager
 from src.common.logger import get_class_logger
 

@@ -1,7 +1,7 @@
 # Path: src/mailbox/mailbox_writer.py
 
 from src.auth.user import User
-from src.client.frontend.models import EmailData
+from src.models.email_data import EmailData
 from src.config import Config
 import os
 import uuid
@@ -15,6 +15,7 @@ class MailboxWriter:
     def __init__(self):
         self.log = get_class_logger(self)
         self.log.info("Initialized MailboxWriter.")
+        self.log.info(self.to_string())
 
     # ------------------------------
     # Metadata Helpers
@@ -194,3 +195,25 @@ class MailboxWriter:
             self.log.warning(f"Message '{filename}' not found in metadata.")
             self.log.info(f"--- END EMAIL DELETE TRANSACTION for user '{user.username}' ---")
             return False
+
+    def to_string(self) -> str:
+        """
+        Returns a diagnostic overview of the MailboxWriter state.
+        """
+        props = {
+            "Class": self.__class__.__name__,
+            "Logger Name": self.log.name,
+            "Mailbox Root": Config.MAILBOXES_DIR,
+            "Temp Root": Config.TEMP_EMAILS_DIR,
+            "Supports Atomic Writes": True,
+        }
+
+        longest = max(len(k) for k in props.keys())
+        lines = ["\nMailboxWriter State:"]
+        lines.append("-" * (longest + 30))
+
+        for k, v in props.items():
+            lines.append(f"{k.ljust(longest)} : {v}")
+
+        lines.append("-" * (longest + 30))
+        return "\n".join(lines)

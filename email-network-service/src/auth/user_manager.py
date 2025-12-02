@@ -36,6 +36,7 @@ class UserManager:
         self.db_file = Config.USER_DB_FILE
         self._load_users()
         self.log.info(f"UserManager initialized. Loaded {len(self.users)} users.")
+        self.log.info(self.to_string())
 
     def _load_users(self):
         """Reads the users.json file and populates the in-memory cache."""
@@ -137,3 +138,27 @@ class UserManager:
             return user
         self.log.warning(f"Authentication failed for: {username}")
         return None
+
+    def to_string(self) -> str:
+        """
+        Returns a detailed diagnostic overview of the UserManager,
+        including cache state, database file details, and locking info.
+        """
+
+        props = {
+            "DB File": self.db_file,
+            "Users Loaded": len(self.users),
+            "Usernames": ", ".join(self.users.keys()) if self.users else "(none)",
+            "Lock Type": type(self._lock).__name__,
+            "Singleton Instance": hex(id(self)),
+        }
+
+        longest = max(len(k) for k in props.keys())
+        lines = ["\nUserManager State:"]
+        lines.append("-" * (longest + 30))
+
+        for k, v in props.items():
+            lines.append(f"{k.ljust(longest)} : {v}")
+
+        lines.append("-" * (longest + 30))
+        return "\n".join(lines)

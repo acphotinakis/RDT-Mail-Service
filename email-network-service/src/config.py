@@ -50,6 +50,9 @@ class Config:
     # Logging
     LOG_LEVEL = "DEBUG"
 
+    # Auto Login File
+    AUTOLOGIN_FILE = ".autologin.json"
+
     # ==============================================================
     # Apply CLI Arguments to Config
     # ==============================================================

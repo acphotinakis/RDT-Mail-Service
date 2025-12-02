@@ -22,6 +22,7 @@ class User:
         self.mailbox_path = os.path.join(Config.MAILBOXES_DIR, self.username)
 
         self.log.debug(f"User object initialized for {self.username}")
+        self.log.info(self.to_string())
 
     # ---------------------------------------------------------
     # Password handling (still raw)
@@ -68,3 +69,29 @@ class User:
             raise ValueError("Invalid user record: 'password' must be a non-empty string.")
 
         return cls(username, password)
+
+    def to_string(self) -> str:
+        """
+        Human-readable representation of a User object.
+        Shows username, mailbox path, and password characteristics
+        (but NEVER prints the raw password).
+        """
+
+        props = {
+            "Username": self.username,
+            "Mailbox Path": self.mailbox_path,
+            "Password Set": self.password != "__internal__",
+            "Password Length": len(self.password) if self.password else 0,
+            "Object ID": hex(id(self)),
+        }
+
+        longest = max(len(k) for k in props.keys())
+        lines = ["\nUser Object State:"]
+        lines.append("-" * (longest + 30))
+
+        for k, v in props.items():
+            lines.append(f"{k.ljust(longest)} : {v}")
+
+        lines.append("-" * (longest + 30))
+
+        return "\n".join(lines)

@@ -8,16 +8,18 @@ Description:
     a bad password).
 """
 
-from typing import Dict, Optional
+from typing import Mapping, Optional, Any
 
 
 class EmailServiceError(Exception):
     """Base exception class for all custom errors in this project."""
 
-    def __init__(self, message: str = "", *, context: Optional[Dict[str, object]] = None):
+    def __init__(self, message: str = "", *, context: Optional[Mapping[str, Any]] = None):
         self.message = message or self.__class__.__name__
-        # Filter out None entries so __str__ stays compact.
-        self.context = {k: v for k, v in (context or {}).items() if v is not None}
+        # Convert Mapping → dict and filter None values
+        self.context = {
+            k: v for k, v in (dict(context) if context else {}).items() if v is not None
+        }
         super().__init__(self.message)
 
     def __str__(self) -> str:

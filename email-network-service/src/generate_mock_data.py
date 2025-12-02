@@ -16,7 +16,7 @@ from email.utils import format_datetime
 from faker import Faker
 
 from src.auth.user_manager import UserManager
-from src.client.frontend.models.email_data import EmailData
+from src.models.email_data import EmailData
 from src.mailbox.mailbox_writer import MailboxWriter
 from src.auth.user import User
 from src.config import Config

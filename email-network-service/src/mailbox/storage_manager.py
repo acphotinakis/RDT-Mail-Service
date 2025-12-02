@@ -12,7 +12,7 @@ from src.mailbox.mailbox_reader import MailboxReader
 from src.mailbox.mailbox_writer import MailboxWriter
 
 import threading
-from src.client.frontend.models import EmailData
+from src.models.email_data import EmailData
 
 
 class StorageManager:
@@ -37,6 +37,7 @@ class StorageManager:
         """Initializes the manager."""
         self.log = get_class_logger(self)
         self.log.info("StorageManager initialized.")
+        self.log.info(self.to_string())
 
         self.mailbox_reader = MailboxReader()
         self.mailbox_writer = MailboxWriter()
@@ -243,3 +244,28 @@ class StorageManager:
 
             finally:
                 self.log.debug(f"[DELETE] Lock released for '{username}'.")
+
+    def to_string(self) -> str:
+        """
+        Returns a diagnostic overview of the StorageManager including
+        subsystem status and lock statistics.
+        """
+        props = {
+            "Class": self.__class__.__name__,
+            "Logger Name": self.log.name,
+            "MailboxReader": self.mailbox_reader.__class__.__name__,
+            "MailboxWriter": self.mailbox_writer.__class__.__name__,
+            "Users with Locks": len(self.locks),
+            "Lock Keys": ", ".join(self.locks.keys()) if self.locks else "(none)",
+            "Singleton Instance": hex(id(self)),
+        }
+
+        longest = max(len(k) for k in props.keys())
+        lines = ["\nStorageManager State:"]
+        lines.append("-" * (longest + 30))
+
+        for k, v in props.items():
+            lines.append(f"{k.ljust(longest)} : {v}")
+
+        lines.append("-" * (longest + 30))
+        return "\n".join(lines)

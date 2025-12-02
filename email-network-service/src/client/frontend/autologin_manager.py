@@ -1,12 +1,11 @@
 import json
 import os
 from typing import Optional, Tuple
+from src.config import Config
 
-
-# Simple config file to store autologin credentials.
-# In a real app, this would be in a more standard user config location.
-AUTOLOGIN_FILE = ".autologin.json"
 from src.common.logger import get_class_logger
+
+log = get_class_logger("STORAGE_WRAPPER_QT")
 
 
 def get_saved_credentials() -> Optional[Tuple[str, str]]:
@@ -14,12 +13,12 @@ def get_saved_credentials() -> Optional[Tuple[str, str]]:
     Reads saved credentials from the autologin file.
     Returns (username, password) or None if not found or invalid.
     """
-    if not os.path.exists(AUTOLOGIN_FILE):
+    if not os.path.exists(Config.AUTOLOGIN_FILE):
         log.info("No autologin file found.")
         return None
 
     try:
-        with open(AUTOLOGIN_FILE, "r") as f:
+        with open(Config.AUTOLOGIN_FILE, "r") as f:
             data = json.load(f)
             username = data.get("username")
             password = data.get("password")
@@ -40,10 +39,10 @@ def save_credentials(username: str, password: str):
     WARNING: This stores the password in plain text.
     """
     try:
-        with open(AUTOLOGIN_FILE, "w") as f:
+        with open(Config.AUTOLOGIN_FILE, "w") as f:
             json.dump({"username": username, "password": password}, f, indent=2)
         # Restrict permissions to only the current user
-        os.chmod(AUTOLOGIN_FILE, 0o600)
+        os.chmod(Config.AUTOLOGIN_FILE, 0o600)
         log.info(f"Saved credentials for user: {username}")
     except IOError as e:
         # Failed to write file, can't do much.
@@ -53,9 +52,9 @@ def save_credentials(username: str, password: str):
 
 def delete_credentials():
     """Deletes the autologin file if it exists."""
-    if os.path.exists(AUTOLOGIN_FILE):
+    if os.path.exists(Config.AUTOLOGIN_FILE):
         try:
-            os.remove(AUTOLOGIN_FILE)
+            os.remove(Config.AUTOLOGIN_FILE)
             log.info("Deleted autologin file.")
         except OSError as e:
             log.error(f"Failed to delete autologin file: {e}")
